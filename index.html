@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IGAP Diamond Tool</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --ink:#0f172a; --muted:#64748b; --border:#e2e8f0;
+  --bg:#f1f5f9; --white:#fff; --radius:14px;
+  --shadow:0 2px 14px rgba(0,0,0,.07);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+/* HERO (neutral dark, no color tint — just the title) */
+.hero{background:linear-gradient(135deg,#111827 0%,#1f2937 55%,#0f172a 100%);
+  color:white;padding:1.8rem 1.5rem 0;text-align:center;position:relative;overflow:hidden}
+.hero>*{position:relative}
+.hero h2{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,4vw,2.2rem);line-height:1.2}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:1fr 500px;gap:1.5rem;max-width:1360px;margin:0 auto;padding:1.5rem;align-items:start}
+@media(max-width:780px){
+  .app{grid-template-columns:1fr}
+}
+
+/* STEPPER NAV (neutral — one section visible at a time) */
+.stepper{display:flex;background:var(--white);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1.2rem;padding:.35rem;overflow-x:auto;gap:.25rem}
+.step{display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border:none;background:none;
+  cursor:pointer;font-size:.8rem;font-weight:600;color:var(--muted);border-radius:10px;
+  transition:all .18s;font-family:'Inter',sans-serif;white-space:nowrap;flex-shrink:0}
+.step:hover{background:#f8fafc;color:var(--ink)}
+.step.active{background:var(--ink);color:white}
+@media(max-width:560px){
+  .stepper{flex-wrap:wrap;overflow-x:visible;gap:.3rem}
+  .step{flex:1 1 28%;justify-content:center;padding:.45rem .3rem;font-size:.7rem}
+}
+
+.panel{display:none}.panel.on{display:block}
+
+
+/* QUESTION LIST (plain rows, simple — like the reference form) */
+#qs-I,#qs-G,#qs-A,#qs-P{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+
+.qrow{display:flex;align-items:flex-start;gap:.8rem;padding:.8rem 1rem;border-bottom:1px solid var(--border)}
+.qrow:last-child{border-bottom:none}
+.qnum{width:24px;height:24px;flex-shrink:0;background:#e2e8f0;border-radius:6px;
+  transform:rotate(45deg);display:flex;align-items:center;justify-content:center;margin-top:.15rem}
+.qnum span{transform:rotate(-45deg);color:var(--ink);font-size:.68rem;font-weight:700}
+.qbody{flex:1;display:flex;flex-direction:column;gap:.45rem}
+.qtxt{font-size:.85rem;font-weight:600;color:var(--ink);line-height:1.4}
+
+.qsel{width:100%;padding:.55rem .65rem;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:.78rem;color:var(--ink);background:var(--white);cursor:pointer}
+.qsel:focus{outline:none;border-color:#94a3b8}
+
+/* NEXT SECTION BUTTON */
+.next-btn{display:flex;align-items:center;justify-content:space-between;
+  background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:1rem 1.4rem;margin-top:1.2rem;cursor:pointer;border:none;width:100%;
+  font-family:'Inter',sans-serif;transition:all .15s}
+.next-btn:hover{box-shadow:0 4px 20px rgba(0,0,0,.12)}
+.next-lbl{font-size:.85rem;font-weight:600;color:var(--muted)}
+.next-title{font-size:1rem;font-weight:700;color:var(--ink)}
+.next-arr{font-size:1.2rem;color:var(--ink)}
+
+/* SIDEBAR (just the big live diamond, nothing else) */
+.sidebar{display:flex;flex-direction:column;gap:1rem;position:sticky;top:16px}
+.dcard{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem;text-align:center}
+.live-diamond{width:100%;max-width:480px;display:block;margin:0 auto}
+@media(max-width:780px){
+  .sidebar{order:-1;position:static}
+  .live-diamond{max-width:170px}
+}
+
+/* RESULTS */
+.rintro{background:var(--white);border-radius:var(--radius);padding:1.2rem 1.4rem;
+  box-shadow:var(--shadow);margin-bottom:1.2rem}
+.rintro h3{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:.4rem}
+.rintro p{font-size:.82rem;color:var(--muted);line-height:1.55}
+.spills{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.spill{display:flex;align-items:center;gap:.35rem;padding:.3rem .75rem;border-radius:999px;font-size:.76rem;font-weight:700;background:#f1f5f9;color:var(--ink)}
+.sd{width:9px;height:9px;border-radius:50%;display:block}
+
+/* DOWNLOAD BUTTONS */
+.dl-row{display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.dlbtn{display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.3rem;
+  border-radius:9px;font-family:'Inter',sans-serif;font-size:.83rem;font-weight:700;
+  cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.dlbtn-solid{background:var(--ink);color:white}.dlbtn-solid:hover{background:#334155}
+.dlbtn-outline{background:white;color:var(--ink);border:1.5px solid var(--border)}.dlbtn-outline:hover{border-color:#94a3b8}
+
+/* RESULTS DIAMONDS DISPLAY */
+.res-diamonds-wrap{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:1.5rem;margin-bottom:1.2rem;text-align:center}
+.res-diamonds-wrap h3{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:1.2rem}
+.res-d-row{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2rem}
+.res-d-item{text-align:center;max-width:100%}
+.res-d-item svg{max-width:100%;height:auto}
+.res-d-label{font-size:.88rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:.5rem;color:var(--muted)}
+
+/* SCORE CARDS */
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem}
+@media(max-width:520px){.rgrid{grid-template-columns:1fr}}
+.rcard{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:1.2rem;border-top:4px solid var(--border)}
+.rcard h4{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.7rem}
+.rbig{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:700;line-height:1;margin-bottom:.3rem;color:var(--ink)}
+.rcomp{display:inline-block;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:999px;background:#f1f5f9;color:var(--ink)}
+.segrow{display:flex;gap:3px;margin-top:.8rem}
+.seg{flex:1;height:15px;border-radius:3px;background:var(--border)}
+.seg.answered{background:#94a3b8}
+
+.warnbox{background:#f1f5f9;border:1px solid var(--border);border-radius:9px;
+  padding:.7rem 1rem;font-size:.8rem;color:var(--muted);margin-bottom:1rem}
+
+/* TOTAL BANNER (neutral) */
+.tbanner{background:linear-gradient(135deg,#111827,#1f2937);color:white;
+  border-radius:var(--radius);padding:1.8rem;box-shadow:0 4px 20px rgba(0,0,0,.18);
+  margin-bottom:1.2rem;display:flex;align-items:center;gap:1.8rem;flex-wrap:wrap}
+.teyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55;margin-bottom:.3rem}
+.tbig{font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;line-height:1}
+.tsub{font-size:.8rem;opacity:.55;margin-top:.3rem}
+.tcomp{display:inline-block;font-size:.8rem;font-weight:700;padding:.3rem .9rem;border-radius:999px;margin-top:.6rem;background:rgba(255,255,255,.12)}
+
+/* HIDDEN download canvas */
+#dl-canvas{display:none}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h2>IGAP Diamond Tool</h2>
+  <svg viewBox="0 0 1200 50" preserveAspectRatio="none" style="display:block;width:100%;height:32px;margin-top:1.5rem">
+    <path d="M0,30 C300,0 900,55 1200,20 L1200,50 L0,50 Z" fill="#f1f5f9"/>
+  </svg>
+</div>
+
+<div class="app">
+<div class="main-col">
+
+  <!-- STEPPER: one section visible at a time -->
+  <div class="stepper">
+    <button class="step active" data-t="I">Innovation</button>
+    <button class="step" data-t="G">Greenness</button>
+    <button class="step" data-t="A">Applicability</button>
+    <button class="step" data-t="P">Performance</button>
+    <button class="step" data-t="R">Results</button>
+  </div>
+
+  <!-- INNOVATION -->
+  <div class="panel on" id="pI">
+    <div id="qs-I"></div>
+    <button class="next-btn" onclick="goTab('G')">
+      <div><div class="next-lbl">Next section</div><div class="next-title">Greenness</div></div>
+      <span class="next-arr">&#8594;</span>
+    </button>
+  </div>
+
+  <!-- GREENNESS -->
+  <div class="panel" id="pG">
+    <div id="qs-G"></div>
+    <button class="next-btn" onclick="goTab('A')">
+      <div><div class="next-lbl">Next section</div><div class="next-title">Applicability</div></div>
+      <span class="next-arr">&#8594;</span>
+    </button>
+  </div>
+
+  <!-- APPLICABILITY -->
+  <div class="panel" id="pA">
+    <div id="qs-A"></div>
+    <button class="next-btn" onclick="goTab('P')">
+      <div><div class="next-lbl">Next section</div><div class="next-title">Performance</div></div>
+      <span class="next-arr">&#8594;</span>
+    </button>
+  </div>
+
+  <!-- PERFORMANCE -->
+  <div class="panel" id="pP">
+    <div id="qs-P"></div>
+    <button class="next-btn" onclick="goTab('R')">
+      <div><div class="next-lbl">See your results</div><div class="next-title">View Full Results</div></div>
+      <span class="next-arr">&#8594;</span>
+    </button>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="panel" id="pR">
+    <div class="rintro">
+      <h3>Scoring Guide</h3>
+      <p>Each of the 32 questions scores one segment. Max per diamond = 100 pts. Total IGAP = average of all four diamonds.</p>
+      <div class="spills">
+        <span class="spill"><span class="sd" style="background:#16a34a"></span>High (Green) = 12.5 pts</span>
+        <span class="spill"><span class="sd" style="background:#ffd304"></span>Acceptable (Yellow) = 6.25 pts</span>
+        <span class="spill"><span class="sd" style="background:#dc2626"></span>Low (Red) = 3.125 pts</span>
+      </div>
+      <p style="margin-top:.6rem;font-size:.78rem"><strong>High</strong> &gt;75% &nbsp;&middot;&nbsp; <strong>Acceptable</strong> 50&ndash;75% &nbsp;&middot;&nbsp; <strong>Low</strong> &lt;50%</p>
+    </div>
+
+    <div id="warnbox" class="warnbox" style="display:none">&#9888; Some questions are unanswered. Complete all 32 for a full IGAP profile.</div>
+
+    <!-- DOWNLOAD BUTTONS -->
+    <div class="dl-row">
+      <button class="dlbtn dlbtn-solid" onclick="downloadPNG()">&#128247; Download Diamond (PNG)</button>
+      <button class="dlbtn dlbtn-solid" onclick="downloadPDF()">&#128462; Download Full Report (PDF)</button>
+      <button class="dlbtn dlbtn-outline" onclick="resetAll()">&#8635; Reset All</button>
+    </div>
+
+    <!-- DIAMOND VISUAL RESULTS (like reference image) -->
+    <div class="res-diamonds-wrap" id="diamond-export-area">
+      <h3>IGAP Diamond Profile</h3>
+      <div class="res-d-row">
+        <!-- Left: segmented diamond -->
+        <div class="res-d-item">
+          <svg id="res-seg-svg" width="280" height="280" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="res-d-label" style="color:var(--muted)">Segment Profile</div>
+        </div>
+        <!-- Middle: score diamonds (center circle shows total) -->
+        <div class="res-d-item">
+          <svg id="res-score-svg" width="300" height="280" viewBox="-14 -14 268 248" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="res-d-label" style="color:var(--muted)">Scores</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOTAL BANNER -->
+    <div class="tbanner">
+      <div>
+        <div class="teyebrow">Overall IGAP Score</div>
+        <div class="tbig" id="tot">&#8211;</div>
+        <div class="tsub" id="tsub">Answer all 32 questions to calculate</div>
+        <span class="tcomp" id="tcomp" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">&#8211;</span>
+      </div>
+    </div>
+
+    <!-- 4 SCORE CARDS -->
+    <div class="rgrid">
+      <div class="rcard" id="card-I"><h4>Innovation</h4><div class="rbig" id="rs-I">&#8211;</div><span class="rcomp" id="rc-I">&#8211;</span><div class="segrow" id="seg-I"></div></div>
+      <div class="rcard" id="card-G"><h4>Greenness</h4><div class="rbig" id="rs-G">&#8211;</div><span class="rcomp" id="rc-G">&#8211;</span><div class="segrow" id="seg-G"></div></div>
+      <div class="rcard" id="card-A"><h4>Applicability</h4><div class="rbig" id="rs-A">&#8211;</div><span class="rcomp" id="rc-A">&#8211;</span><div class="segrow" id="seg-A"></div></div>
+      <div class="rcard" id="card-P"><h4>Performance</h4><div class="rbig" id="rs-P">&#8211;</div><span class="rcomp" id="rc-P">&#8211;</span><div class="segrow" id="seg-P"></div></div>
+    </div>
+  </div>
+
+</div><!-- /main-col -->
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="dcard">
+    <svg id="live-svg" class="live-diamond" width="480" height="480" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</div>
+</div><!-- /app -->
+
+<canvas id="dl-canvas"></canvas>
+
+<script>
+/* ═══════════════════════════════ DATA ════════════════════════════════ */
+const QS={
+  I:[
+    {q:"To what extent does the method employ advanced instrumentation for sample preparation or analysis?",
+     opts:[{tag:"High",c:"g",text:"Fully advanced technologies (e.g. MS/MS, HRMS)",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Partially advanced (e.g. UHPLC, GC-MS, LC-MS)",pts:6.25},
+           {tag:"Low",c:"r",text:"Only conventional instruments (e.g. standard HPLC, UV\u2013Vis, manual LLE/SPE)",pts:3.125}]},
+    {q:"To what extent does the method utilize advanced digital tools, data analytics, or AI/ML?",
+     opts:[{tag:"High",c:"g",text:"Fully integrates AI or advanced analytics (e.g. predictive algorithms, big data, in silico prediction)",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Limited use of computational tools (e.g. chemometrics, improved statistical software)",pts:6.25},
+           {tag:"Low",c:"r",text:"Standard or routine data processing only (e.g. basic Excel, manual handling)",pts:3.125}]},
+    {q:"How adaptable or scalable is the method for future AI, automation, or new analytes/matrices?",
+     opts:[{tag:"High",c:"g",text:"Designed for easy AI/ML integration with minimal modifications",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Adaptable with moderate adjustments (e.g. ML calibration, minor hardware upgrades)",pts:6.25},
+           {tag:"Low",c:"r",text:"Not adaptable; relies on conventional manual or rigid instrumentation",pts:3.125}]},
+    {q:"To what extent does the method introduce a novel concept, principle, or mechanism?",
+     opts:[{tag:"High",c:"g",text:"Entirely new approach, principle, or framework; explores previously unexplored analytes or matrices",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Meaningfully modifies an existing method or extends it to new contexts",pts:6.25},
+           {tag:"Low",c:"r",text:"Routine application of an established method without significant change",pts:3.125}]},
+    {q:"To what extent does the method utilize novel reagents, materials, or probes?",
+     opts:[{tag:"High",c:"g",text:"Completely new reagents, nanomaterials, or selective probes (e.g. graphene, carbon dots, MIPs, NADES)",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Adapts known reagents in a slightly innovative way (e.g. modified SPE sorbent)",pts:6.25},
+           {tag:"Low",c:"r",text:"Conventional materials or reagents (e.g. standard antibodies, common solvents)",pts:3.125}]},
+    {q:"To what extent does the method improve efficiency, throughput, or performance vs existing methods?",
+     opts:[{tag:"High",c:"g",text:"Substantially faster / more sensitive / higher throughput than conventional methods",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Moderate improvements in speed, sensitivity, throughput, or reproducibility",pts:6.25},
+           {tag:"Low",c:"r",text:"Comparable or worse performance; no significant gains",pts:3.125}]},
+    {q:"To what extent does the method integrate knowledge from multiple scientific fields?",
+     opts:[{tag:"High",c:"g",text:"Fully integrates \u22652 fields to create new capabilities (e.g. chemistry + AI; biology + nanomaterials)",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Uses a second field to enhance the method, but core analysis remains conventional",pts:6.25},
+           {tag:"Low",c:"r",text:"Stays within a single field with no meaningful interdisciplinary integration",pts:3.125}]},
+    {q:"Does the method consider green/white analytical chemistry principles and use recognized evaluation metrics (AGREE, AGREEprep, BAGI, RAPI\u2026)?",
+     opts:[{tag:"High",c:"g",text:"Considers all principles; systematically uses multiple recognized metrics/indexes",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Considers few principles; uses only one or two metrics",pts:6.25},
+           {tag:"Low",c:"r",text:"Does not consider any analytical chemistry principles; no metrics used",pts:3.125}]}
+  ],
+  G:[
+    {q:"Degree of automation of the analytical workflow",
+     opts:[{tag:"High",c:"g",text:"Fully automated workflow",pts:12.5},{tag:"Acceptable",c:"y",text:"Partially automated",pts:6.25},{tag:"Low",c:"r",text:"Entirely manual",pts:3.125}]},
+    {q:"Degree of miniaturization of the method",
+     opts:[{tag:"High",c:"g",text:"Fully miniaturized",pts:12.5},{tag:"Acceptable",c:"y",text:"Partially miniaturized",pts:6.25},{tag:"Low",c:"r",text:"Conventional large-scale system",pts:3.125}]},
+    {q:"Type of method / complexity of sample preparation",
+     opts:[{tag:"High",c:"g",text:"No sample preparation required",pts:12.5},{tag:"Acceptable",c:"y",text:"Simple procedure (e.g. filtration)",pts:6.25},{tag:"Low",c:"r",text:"Extraction required",pts:3.125}]},
+    {q:"Mode of sample collection / measurement",
+     opts:[{tag:"High",c:"g",text:"In-line measurement",pts:12.5},{tag:"Acceptable",c:"y",text:"On-line or at-line",pts:6.25},{tag:"Low",c:"r",text:"Off-line",pts:3.125}]},
+    {q:"Instrumentation: energy consumption and occupational hazard",
+     opts:[{tag:"High",c:"g",text:"\u22640.1 kWh/sample; hermetic sealing \u2014 no vapor emission",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"~1.5 kWh/sample; moderate occupational exposure",pts:6.25},
+           {tag:"Low",c:"r",text:">1.5 kWh/sample; emission of vapors to atmosphere",pts:3.125}]},
+    {q:"Waste: volume generated and treatment applied",
+     opts:[{tag:"High",c:"g",text:"<1 mL (g); recycling treatment",pts:12.5},{tag:"Acceptable",c:"y",text:"1\u201310 mL (g); degradation or passivation",pts:6.25},{tag:"Low",c:"r",text:">10 mL (g); no treatment",pts:3.125}]},
+    {q:"Reagents and solvents: amount and type",
+     opts:[{tag:"High",c:"g",text:"<10 mL (<10 g); solvent-free or green solvents only",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"10\u2013100 mL (10\u2013100 g); green solvents and reagents",pts:6.25},
+           {tag:"Low",c:"r",text:">100 mL (>100 g); non-green solvents and reagents",pts:3.125}]},
+    {q:"Chemical hazard profile (NFPA health and safety scores)",
+     opts:[{tag:"High",c:"g",text:"Health hazard 0\u20131; flammability/instability 0\u20131",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Health or safety score 2\u20133",pts:6.25},
+           {tag:"Low",c:"r",text:"Health hazard 4; flammability/instability 4",pts:3.125}]}
+  ],
+  A:[
+    {q:"Type of analysis performed",
+     opts:[{tag:"Broad",c:"g",text:"Confirmatory and quantitative",pts:12.5},{tag:"Partial",c:"y",text:"Quantitative or screening only",pts:6.25},{tag:"Limited",c:"r",text:"Qualitative only",pts:3.125}]},
+    {q:"Number of analytes simultaneously determined",
+     opts:[{tag:"Broad",c:"g",text:"\u226515 (same class) or \u226510 (different classes)",pts:12.5},
+           {tag:"Partial",c:"y",text:"6\u201314 (same class) or 3\u20139 (different classes)",pts:6.25},
+           {tag:"Limited",c:"r",text:"\u22645 (same class) or \u22643 (different classes)",pts:3.125}]},
+    {q:"Sample throughput (samples per hour)",
+     opts:[{tag:"Broad",c:"g",text:"\u226510 samples per hour",pts:12.5},{tag:"Partial",c:"y",text:"4\u20139 samples per hour",pts:6.25},{tag:"Limited",c:"r",text:"\u22643 samples per hour",pts:3.125}]},
+    {q:"Amount of sample required per analysis",
+     opts:[{tag:"Broad",c:"g",text:"\u2264100 \u00b5L/mg (bioanalytical) or \u226410 mL/g (food/environmental)",pts:12.5},
+           {tag:"Partial",c:"y",text:"101\u2013500 \u00b5L/mg (bioanalytical) or 10.1\u201350 mL/g (other)",pts:6.25},
+           {tag:"Limited",c:"r",text:">500 \u00b5L/mg (bioanalytical) or >50 mL/g (other)",pts:3.125}]},
+    {q:"Matrix flexibility of the method",
+     opts:[{tag:"Broad",c:"g",text:"Applicable to >3 sample types (e.g. food, water, biological fluids)",pts:12.5},
+           {tag:"Partial",c:"y",text:"Works with 2\u20133 related matrices",pts:6.25},{tag:"Limited",c:"r",text:"Limited to a single matrix",pts:3.125}]},
+    {q:"Availability and accessibility of reagents and materials",
+     opts:[{tag:"Broad",c:"g",text:"Widely available commercial reagents routinely used in standard labs",pts:12.5},
+           {tag:"Partial",c:"y",text:"Less common reagents or materials requiring simple in-lab synthesis",pts:6.25},
+           {tag:"Limited",c:"r",text:"Specialized materials requiring complex synthesis or expert equipment",pts:3.125}]},
+    {q:"Compatibility with routine laboratory infrastructure",
+     opts:[{tag:"Broad",c:"g",text:"Standard widely available instruments; operable by staff with standard training",pts:12.5},
+           {tag:"Partial",c:"y",text:"Requires specialized equipment or minor modifications; some specialized training",pts:6.25},
+           {tag:"Limited",c:"r",text:"Requires highly specialized instruments; highly trained experts only",pts:3.125}]},
+    {q:"Cost-effectiveness per analysis",
+     opts:[{tag:"Broad",c:"g",text:"Low cost per sample; minimal consumables",pts:12.5},
+           {tag:"Partial",c:"y",text:"Moderate cost; acceptable for routine use",pts:6.25},
+           {tag:"Limited",c:"r",text:"High cost; expensive reagents or instruments",pts:3.125}]}
+  ],
+  P:[
+    {q:"Linearity of the calibration curve",
+     opts:[{tag:"High",c:"g",text:"r\u00b2 > 0.99",pts:12.5},{tag:"Acceptable",c:"y",text:"r\u00b2 > 0.95",pts:6.25},{tag:"Low",c:"r",text:"r\u00b2 > 0.90 only",pts:3.125}]},
+    {q:"Limit of Quantification (LOQ) relative to expected analyte concentration",
+     opts:[{tag:"High",c:"g",text:"LOQ < 3% of expected mean analyte concentration",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"LOQ 3\u201310% of expected mean analyte concentration",pts:6.25},
+           {tag:"Low",c:"r",text:"LOQ > 10% of expected mean analyte concentration",pts:3.125}]},
+    {q:"Repeatability (intra-day precision, RSD)",
+     opts:[{tag:"High",c:"g",text:"RSD < 10%",pts:12.5},{tag:"Acceptable",c:"y",text:"RSD 10\u201320%",pts:6.25},{tag:"Low",c:"r",text:"RSD > 20%",pts:3.125}]},
+    {q:"Intermediate precision (inter-day precision, RSD)",
+     opts:[{tag:"High",c:"g",text:"RSD < 20%",pts:12.5},{tag:"Acceptable",c:"y",text:"RSD 20\u201335%",pts:6.25},{tag:"Low",c:"r",text:"RSD > 35%",pts:3.125}]},
+    {q:"Working range relative to LOQ",
+     opts:[{tag:"High",c:"g",text:"Wider than 100 \u00d7 LOQ",pts:12.5},{tag:"Acceptable",c:"y",text:"Wider than 50 \u00d7 LOQ",pts:6.25},{tag:"Low",c:"r",text:"Wider than 5 \u00d7 LOQ only",pts:3.125}]},
+    {q:"Selectivity: number of potential interferents assessed",
+     opts:[{tag:"High",c:"g",text:"Demonstrated for \u22655 potential interferents",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Demonstrated for 2\u20134 potential interferents",pts:6.25},
+           {tag:"Low",c:"r",text:"Demonstrated for \u22641 or not demonstrated",pts:3.125}]},
+    {q:"Robustness / Ruggedness: number of factors tested",
+     opts:[{tag:"High",c:"g",text:"Demonstrated against \u22655 factors",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Demonstrated against 2\u20134 factors",pts:6.25},
+           {tag:"Low",c:"r",text:"Demonstrated against \u22641 factor or not demonstrated",pts:3.125}]},
+    {q:"Recovery across all studied concentration levels",
+     opts:[{tag:"High",c:"g",text:"Recovery approximately 80\u2013110% across all levels",pts:12.5},
+           {tag:"Acceptable",c:"y",text:"Recovery approximately 60\u2013120% across all levels",pts:6.25},
+           {tag:"Low",c:"r",text:"Recovery approximately 20\u2013130% or outside acceptable limits",pts:3.125}]}
+  ]
+};
+
+/* ═══════════════════════════════ STATE ═══════════════════════════════ */
+const ANS={I:{},G:{},A:{},P:{}};
+const SFILL={g:'#16a34a',y:'#ffd304',r:'#dc2626',e:'#e5e7eb'};
+const COMP={g:{lbl:'High Compliance'},y:{lbl:'Acceptable'},r:{lbl:'Low Compliance'},n:{lbl:'\u2013'}};
+function compKey(s){return s===null?'n':s>75?'g':s>=50?'y':'r'}
+function scoreColor(s){return s>75?'#16a34a':s>=50?'#ffd304':'#dc2626'}
+
+/* ═══════════════════════════════ RENDER QUESTIONS ════════════════════ */
+function renderSec(k){
+  const el=document.getElementById('qs-'+k);
+  el.innerHTML=QS[k].map((q,qi)=>`
+    <div class="qrow">
+      <div class="qnum"><span>${qi+1}</span></div>
+      <div class="qbody">
+        <div class="qtxt">${q.q}</div>
+        <select class="qsel" id="qsel-${k}-${qi}" onchange="pick('${k}',${qi},this.value)">
+          <option value="">Select an answer…</option>
+          ${q.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
+        </select>
+      </div>
+    </div>`).join('');
+}
+['I','G','A','P'].forEach(renderSec);
+
+function pick(k,qi,val){
+  if(val===''){delete ANS[k][qi];}
+  else{
+    const oi=+val,o=QS[k][qi].opts[oi];
+    ANS[k][qi]={oi,c:o.c,pts:o.pts};
+  }
+  drawAllDiamonds();
+}
+function calcScore(k){
+  const a=ANS[k];
+  return Object.keys(a).length===0?null:Object.values(a).reduce((s,v)=>s+v.pts,0);
+}
+
+/* ═══════════════════════════════ DIAMOND GEOMETRY ════════════════════
+   The IGAP diamond = 4 sub-diamonds arranged: I=top, G=right, A=bottom, P=left
+   Each sub-diamond has 8 triangular segments from center.
+   For the 220x220 main svg: half-size H=46, centers:
+   I:(110,55) G:(165,110) A:(110,165) P:(55,110)
+════════════════════════════════════════════════════════════════════════ */
+const H=46;
+const SUBS={I:{cx:110,cy:55},G:{cx:165,cy:110},A:{cx:110,cy:165},P:{cx:55,cy:110}};
+
+function segPaths(cx,cy,h){
+  const T=[cx,cy-h],R=[cx+h,cy],B=[cx,cy+h],L=[cx-h,cy],C=[cx,cy];
+  const m=h*0.5;
+  return[
+    [C,T,[cx-m,cy-m]],[C,[cx-m,cy-m],L],
+    [C,L,[cx-m,cy+m]],[C,[cx-m,cy+m],B],
+    [C,B,[cx+m,cy+m]],[C,[cx+m,cy+m],R],
+    [C,R,[cx+m,cy-m]],[C,[cx+m,cy-m],T]
+  ].map(p=>({
+    d:`M${p[0][0]},${p[0][1]} L${p[1][0]},${p[1][1]} L${p[2][0]},${p[2][1]}Z`,
+    lx:(p[0][0]+p[1][0]+p[2][0])/3,
+    ly:(p[0][1]+p[1][1]+p[2][1])/3
+  }));
+}
+
+/* Draw segmented diamond (live sidebar + results left) */
+const SUB_LABEL_POS={
+  I:{dx:0,dy:-1,anchor:'middle'},
+  G:{dx:1,dy:0,anchor:'start'},
+  A:{dx:0,dy:1,anchor:'middle'},
+  P:{dx:-1,dy:0,anchor:'end'}
+};
+function drawSegDiamond(svgId,scale,showLabels){
+  const svg=document.getElementById(svgId);if(!svg)return;
+  const s=scale||1;
+  let h='';
+  // white background sub-diamonds
+  Object.entries(SUBS).forEach(([k,sub])=>{
+    const cx=sub.cx*s,cy=sub.cy*s,hs=H*s;
+    h+=`<polygon points="${cx},${cy-hs} ${cx+hs},${cy} ${cx},${cy+hs} ${cx-hs},${cy}" fill="#f3f4f6" stroke="white" stroke-width="${2*s}"/>`;
+  });
+  // colored segments, each numbered 1-8 to match the question list
+  Object.entries(SUBS).forEach(([k,sub])=>{
+    const cx=sub.cx*s,cy=sub.cy*s,hs=H*s;
+    segPaths(cx,cy,hs).forEach((seg,i)=>{
+      const ans=ANS[k][i];
+      h+=`<path d="${seg.d}" fill="${ans?SFILL[ans.c]:SFILL.e}" stroke="white" stroke-width="${1.2*s}" stroke-linejoin="round"/>`;
+      h+=`<text x="${seg.lx}" y="${seg.ly+3*s}" text-anchor="middle" font-size="${6.5*s}" font-weight="700" fill="${ans?'#fff':'#9ca3af'}" font-family="Inter,sans-serif">${i+1}</text>`;
+    });
+    // border
+    h+=`<polygon points="${cx},${cy-hs} ${cx+hs},${cy} ${cx},${cy+hs} ${cx-hs},${cy}" fill="none" stroke="#000" stroke-width="${1*s}"/>`;
+    // letter label beside each sub-diamond (I/G/A/P)
+    if(showLabels){
+      const lp=SUB_LABEL_POS[k];
+      const lx=cx+lp.dx*(hs+12*s),ly=cy+lp.dy*(hs+12*s)+4*s;
+      h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${k}</text>`;
+    }
+  });
+  h+=`<circle cx="${110*s}" cy="${110*s}" r="${8*s}" fill="white" stroke="#d1d5db" stroke-width="${1.5*s}"/>`;
+  svg.innerHTML=h;
+}
+
+/* Draw score diamonds (middle panel in results — 4 solid-colored diamonds with score text) */
+function drawScoreDiamond(svgId){
+  const svg=document.getElementById(svgId);if(!svg)return;
+  /* Layout: I top-center, G right, A bottom-center, P left — same tight
+     spacing as the segment-profile diamond so the four touch, not spread out */
+  const SUB2={I:{cx:120,cy:55},G:{cx:175,cy:110},A:{cx:120,cy:165},P:{cx:65,cy:110}};
+  const H2=46;
+  let h='';
+  Object.entries(SUB2).forEach(([k,sub])=>{
+    const {cx,cy}=sub;
+    const sc=calcScore(k);
+    const fill=sc!==null?scoreColor(sc):'#e5e7eb';
+    h+=`<polygon points="${cx},${cy-H2} ${cx+H2},${cy} ${cx},${cy+H2} ${cx-H2},${cy}" fill="${fill}" stroke="white" stroke-width="2"/>`;
+    // score text (bigger, no "pts" label)
+    if(sc!==null){
+      h+=`<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="15" font-weight="800" fill="white" font-family="Inter,sans-serif">${sc.toFixed(2)}</text>`;
+    }
+    // letter label beside each sub-diamond (I/G/A/P), matching the segment profile
+    const lp=SUB_LABEL_POS[k];
+    const lx=cx+lp.dx*(H2+12),ly=cy+lp.dy*(H2+12)+4;
+    h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="14" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${k}</text>`;
+  });
+  // center circle shows the overall total IGAP score (no % sign, bigger number)
+  const scores=['I','G','A','P'].map(k=>calcScore(k));
+  const valid=scores.filter(s=>s!==null);
+  if(valid.length>0){
+    const avg=scores.reduce((s,v)=>s+(v||0),0)/4;
+    h+=`<circle cx="120" cy="110" r="15" fill="${scoreColor(avg)}" stroke="white" stroke-width="3"/>`;
+    h+=`<text x="120" y="114" text-anchor="middle" font-size="11" font-weight="800" fill="white" font-family="Inter,sans-serif">${avg.toFixed(1)}</text>`;
+  } else {
+    h+=`<circle cx="120" cy="110" r="15" fill="white" stroke="#d1d5db" stroke-width="1.5"/>`;
+    h+=`<text x="120" y="113" text-anchor="middle" font-size="6.5" fill="#9ca3af" font-family="Inter,sans-serif">–</text>`;
+  }
+  svg.innerHTML=h;
+}
+
+function drawAllDiamonds(){
+  drawSegDiamond('live-svg',1,true);
+  drawSegDiamond('res-seg-svg',1,true);
+  drawScoreDiamond('res-score-svg');
+}
+
+/* ═══════════════════════════════ RESULTS UPDATE ══════════════════════ */
+function updateResults(){
+  drawAllDiamonds();
+  const tot=['I','G','A','P'].reduce((s,k)=>s+Object.keys(ANS[k]).length,0);
+  document.getElementById('warnbox').style.display=tot<32?'block':'none';
+  ['I','G','A','P'].forEach(k=>{
+    const sc=calcScore(k);
+    const rsEl=document.getElementById('rs-'+k);
+    rsEl.textContent=sc!==null?sc.toFixed(1)+'%':'\u2013';
+    const ck=compKey(sc),cc=COMP[ck];
+    const rcEl=document.getElementById('rc-'+k);
+    rcEl.textContent=cc.lbl;
+    const cardEl=document.getElementById('card-'+k);
+    if(sc!==null){
+      const col=scoreColor(sc);
+      cardEl.style.borderTopColor=col;
+      rsEl.style.color=col;
+      rcEl.style.background=col;
+      rcEl.style.color='#fff';
+    } else {
+      cardEl.style.borderTopColor='var(--border)';
+      rsEl.style.color='var(--ink)';
+      rcEl.style.background='#f1f5f9';
+      rcEl.style.color='var(--ink)';
+    }
+    let s='';
+    for(let i=0;i<8;i++){const a=ANS[k][i];s+=`<div class="seg ${a?'answered':''}"></div>`}
+    document.getElementById('seg-'+k).innerHTML=s;
+  });
+  const scores=['I','G','A','P'].map(k=>calcScore(k));
+  const valid=scores.filter(s=>s!==null);
+  if(valid.length){
+    const avg=scores.reduce((s,v)=>s+(v||0),0)/4;
+    document.getElementById('tot').textContent=avg.toFixed(1)+'%';
+    document.getElementById('tsub').textContent='Average of all four diamonds (\u00f74)';
+    const ck=compKey(avg),cc=COMP[ck];
+    document.getElementById('tcomp').textContent=cc.lbl;
+  }
+}
+
+/* ═══════════════════════════════ NAVIGATION (one section at a time) ═══ */
+function goTab(t){
+  document.querySelectorAll('.step').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelector('[data-t="'+t+'"]').classList.add('active');
+  document.getElementById('p'+t).classList.add('on');
+  if(t==='R')updateResults();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.step').forEach(b=>b.addEventListener('click',()=>goTab(b.dataset.t)));
+
+/* ═══════════════════════════════ RESET ═══════════════════════════════ */
+function resetAll(){
+  if(!confirm('Reset all 32 answers?'))return;
+  ['I','G','A','P'].forEach(k=>{ANS[k]={};renderSec(k)});
+  drawAllDiamonds();updateResults();
+}
+
+/* ═══════════════════════════════ DOWNLOAD PNG ════════════════════════
+   Serialize the three result SVGs onto a canvas and download
+════════════════════════════════════════════════════════════════════════ */
+function downloadPNG(){
+  updateResults();
+  setTimeout(()=>{
+    const area=document.getElementById('diamond-export-area');
+    const svgs=area.querySelectorAll('svg');
+    const canvas=document.getElementById('dl-canvas');
+    const W=520,H2=300;
+    canvas.width=W;canvas.height=H2;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='white';ctx.fillRect(0,0,W,H2);
+    // title
+    ctx.fillStyle='#0f172a';ctx.font='bold 16px Inter,sans-serif';
+    ctx.textAlign='center';ctx.fillText('IGAP Diamond Profile',W/2,28);
+
+    const positions=[
+      {x:10,y:40,w:240,h:240},
+      {x:270,y:50,w:240,h:220}
+    ];
+    let done=0;
+    svgs.forEach((svg,i)=>{
+      const clone=svg.cloneNode(true);
+      const xmls=new XMLSerializer().serializeToString(clone);
+      const blob=new Blob([xmls],{type:'image/svg+xml'});
+      const url=URL.createObjectURL(blob);
+      const img=new Image();
+      img.onload=function(){
+        const p=positions[i];
+        ctx.drawImage(img,p.x,p.y,p.w,p.h);
+        URL.revokeObjectURL(url);
+        done++;
+        if(done===svgs.length){
+          const a=document.createElement('a');
+          a.download='IGAP_Diamond.png';
+          a.href=canvas.toDataURL('image/png');
+          a.click();
+        }
+      };
+      img.src=url;
+    });
+  },300);
+}
+
+/* ═══════════════════════════════ DOWNLOAD PDF ════════════════════════ */
+function downloadPDF(){
+  updateResults();
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,M=15;
+  let y=20;
+
+  // Title
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(18);doc.setTextColor(15,23,42);
+  doc.text('IGAP Diamond — Full Evaluation Report',W/2,y,{align:'center'});
+  y+=8;
+  doc.setFontSize(10);doc.setFont('helvetica','normal');doc.setTextColor(100,116,139);
+  doc.text('Innovation \u00b7 Greenness \u00b7 Applicability \u00b7 Performance',W/2,y,{align:'center'});
+  y+=10;
+
+  // Scores summary box
+  const scores={I:calcScore('I'),G:calcScore('G'),A:calcScore('A'),P:calcScore('P')};
+  const avg=Object.values(scores).filter(s=>s!==null).length>0?
+    Object.values(scores).reduce((s,v)=>s+(v||0),0)/4:null;
+
+  doc.setFillColor(241,245,249);doc.roundedRect(M,y,W-2*M,28,3,3,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,23,42);
+  doc.text('Overall IGAP Score: '+(avg?avg.toFixed(1)+'%':'Not complete'),M+4,y+8);
+  const secs=[['I','Innovation','#7c3aed'],['G','Greenness','#1e7d4f'],['A','Applicability','#2563eb'],['P','Performance','#dc2626']];
+  const xStep=(W-2*M)/4;
+  secs.forEach(([k,lbl],i)=>{
+    const sc=scores[k];
+    const xc=M+i*xStep+xStep/2;
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(100,116,139);
+    doc.text(lbl,xc,y+17,{align:'center'});
+    doc.setFontSize(12);
+    const rgb=sc?scoreColor(sc).replace('#','').match(/../g).map(x=>parseInt(x,16)):[150,150,150];
+    doc.setTextColor(rgb[0],rgb[1],rgb[2]);
+    doc.text(sc?sc.toFixed(1)+'%':'–',xc,y+24,{align:'center'});
+  });
+  y+=34;
+
+  // Add diamond SVG as image
+  doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(15,23,42);
+  doc.text('IGAP Diamond Profile',M,y);y+=6;
+
+  // Per-section Q&A
+  const secNames={I:'Innovation',G:'Greenness',A:'Applicability',P:'Performance'};
+  const secCols={I:[124,58,237],G:[30,125,79],A:[37,99,235],P:[220,38,38]};
+  const optColors={g:[22,163,74],y:[255,211,4],r:[220,38,38]};
+  const lighten=(c,f)=>c.map(v=>Math.round(v+(255-v)*f));
+
+  secs.forEach(([k,lbl])=>{
+    if(y>260){doc.addPage();y=20}
+    // Section header
+    const col=secCols[k];
+    doc.setFillColor(col[0],col[1],col[2]);
+    doc.roundedRect(M,y,W-2*M,9,2,2,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
+    const sc=scores[k];
+    doc.text(lbl+(sc?' \u2014 '+sc.toFixed(1)+' pts':' \u2014 incomplete'),M+4,y+6.5);
+    y+=13;
+
+    QS[k].forEach((q,qi)=>{
+      if(y>270){doc.addPage();y=20}
+      const ans=ANS[k][qi];
+      // Question
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(15,23,42);
+      const qlines=doc.splitTextToSize((qi+1)+'. '+q.q,W-2*M-8);
+      doc.text(qlines,M+6,y);y+=qlines.length*4.5+1;
+      // Answer
+      if(ans){
+        const opt=q.opts[ans.oi];
+        const oc=optColors[ans.c];
+        const ocLight=lighten(oc,0.85);
+        doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
+        doc.setDrawColor(oc[0],oc[1],oc[2]);
+        const alines=doc.splitTextToSize('\u25b6 '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
+        const ah=alines.length*4+4;
+        doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
+        doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
+        doc.text(alines,M+9,y+2.5);
+        y+=ah+3;
+      } else {
+        doc.setFont('helvetica','italic');doc.setFontSize(8.5);doc.setTextColor(150,150,150);
+        doc.text('Not answered',M+9,y);y+=6;
+      }
+      y+=1;
+    });
+    y+=4;
+  });
+
+  // Footer
+  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(150,150,150);
+  doc.text('IGAP Diamond Tool \u00b7 Inspired by the GAPI framework',W/2,290,{align:'center'});
+
+  doc.save('IGAP_Full_Report.pdf');
+}
+
+/* INIT */
+updateResults();
+</script>
+</body>
+</html>
