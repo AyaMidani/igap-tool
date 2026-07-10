@@ -58,6 +58,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
   font-family:'Inter',sans-serif;font-size:.78rem;color:var(--ink);background:var(--white);cursor:pointer}
 .qsel:focus{outline:none;border-color:#94a3b8}
 
+/* SPLIT QUESTIONS (two side-by-side sub-answers that sum to one score) */
+.qsplit{display:flex;gap:.6rem;flex-wrap:wrap}
+.qsplit-part{flex:1;min-width:160px;display:flex;flex-direction:column;gap:.35rem}
+.qsplit-lbl{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+
 /* NEXT SECTION BUTTON */
 .next-btn{display:flex;align-items:center;justify-content:space-between;
   background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -221,7 +226,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
         </div>
         <!-- Middle: score diamonds (center circle shows total) -->
         <div class="res-d-item">
-          <svg id="res-score-svg" width="300" height="280" viewBox="-14 -14 268 248" xmlns="http://www.w3.org/2000/svg"></svg>
+          <svg id="res-score-svg" width="280" height="280" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
           <div class="res-d-label" style="color:var(--muted)">Scores</div>
         </div>
       </div>
@@ -252,6 +257,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 <div class="sidebar">
   <div class="dcard">
     <svg id="live-svg" class="live-diamond" width="480" height="480" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="res-d-label" style="color:var(--muted)">Segment Profile</div>
+  </div>
+  <div class="dcard">
+    <svg id="live-score-svg" class="live-diamond" width="480" height="480" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div class="res-d-label" style="color:var(--muted)">Scores</div>
   </div>
 </div>
 </div><!-- /app -->
@@ -262,35 +272,35 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 /* ═══════════════════════════════ DATA ════════════════════════════════ */
 const QS={
   I:[
-    {q:"To what extent does the method employ advanced instrumentation for sample preparation or analysis?",
+    {q:"Use of advanced instrumentation for sample preparation and/or analysis.",
      opts:[{tag:"High",c:"g",text:"Fully advanced technologies (e.g. MS/MS, HRMS)",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Partially advanced (e.g. UHPLC, GC-MS, LC-MS)",pts:6.25},
            {tag:"Low",c:"r",text:"Only conventional instruments (e.g. standard HPLC, UV\u2013Vis, manual LLE/SPE)",pts:3.125}]},
-    {q:"To what extent does the method utilize advanced digital tools, data analytics, or AI/ML?",
+    {q:"Utilization of digital tools, data analytics, and artificial intelligence/machine learning (AI/ML).",
      opts:[{tag:"High",c:"g",text:"Fully integrates AI or advanced analytics (e.g. predictive algorithms, big data, in silico prediction)",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Limited use of computational tools (e.g. chemometrics, improved statistical software)",pts:6.25},
            {tag:"Low",c:"r",text:"Standard or routine data processing only (e.g. basic Excel, manual handling)",pts:3.125}]},
-    {q:"How adaptable or scalable is the method for future AI, automation, or new analytes/matrices?",
+    {q:"Potential for AI integration, automation, and application to new analytes or matrices.",
      opts:[{tag:"High",c:"g",text:"Designed for easy AI/ML integration with minimal modifications",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Adaptable with moderate adjustments (e.g. ML calibration, minor hardware upgrades)",pts:6.25},
            {tag:"Low",c:"r",text:"Not adaptable; relies on conventional manual or rigid instrumentation",pts:3.125}]},
-    {q:"To what extent does the method introduce a novel concept, principle, or mechanism?",
+    {q:"Introduction of a novel analytical concept, principle, or mechanism.",
      opts:[{tag:"High",c:"g",text:"Entirely new approach, principle, or framework; explores previously unexplored analytes or matrices",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Meaningfully modifies an existing method or extends it to new contexts",pts:6.25},
            {tag:"Low",c:"r",text:"Routine application of an established method without significant change",pts:3.125}]},
-    {q:"To what extent does the method utilize novel reagents, materials, or probes?",
+    {q:"Use of innovative reagents, materials, sorbents, probes, or functional materials.",
      opts:[{tag:"High",c:"g",text:"Completely new reagents, nanomaterials, or selective probes (e.g. graphene, carbon dots, MIPs, NADES)",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Adapts known reagents in a slightly innovative way (e.g. modified SPE sorbent)",pts:6.25},
            {tag:"Low",c:"r",text:"Conventional materials or reagents (e.g. standard antibodies, common solvents)",pts:3.125}]},
-    {q:"To what extent does the method improve efficiency, throughput, or performance vs existing methods?",
+    {q:"Improvement in efficiency, throughput, sensitivity, selectivity, robustness, or overall analytical performance compared with existing methods.",
      opts:[{tag:"High",c:"g",text:"Substantially faster / more sensitive / higher throughput than conventional methods",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Moderate improvements in speed, sensitivity, throughput, or reproducibility",pts:6.25},
            {tag:"Low",c:"r",text:"Comparable or worse performance; no significant gains",pts:3.125}]},
-    {q:"To what extent does the method integrate knowledge from multiple scientific fields?",
+    {q:"Integration of knowledge from multiple scientific disciplines or promotion of interdisciplinary collaboration.",
      opts:[{tag:"High",c:"g",text:"Fully integrates \u22652 fields to create new capabilities (e.g. chemistry + AI; biology + nanomaterials)",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Uses a second field to enhance the method, but core analysis remains conventional",pts:6.25},
            {tag:"Low",c:"r",text:"Stays within a single field with no meaningful interdisciplinary integration",pts:3.125}]},
-    {q:"Does the method consider green/white analytical chemistry principles and use recognized evaluation metrics (AGREE, AGREEprep, BAGI, RAPI\u2026)?",
+    {q:"Incorporation of green and white analytical chemistry principles and application of recognized assessment metrics.",
      opts:[{tag:"High",c:"g",text:"Considers all principles; systematically uses multiple recognized metrics/indexes",pts:12.5},
            {tag:"Acceptable",c:"y",text:"Considers few principles; uses only one or two metrics",pts:6.25},
            {tag:"Low",c:"r",text:"Does not consider any analytical chemistry principles; no metrics used",pts:3.125}]}
@@ -304,20 +314,26 @@ const QS={
      opts:[{tag:"High",c:"g",text:"No sample preparation required",pts:12.5},{tag:"Acceptable",c:"y",text:"Simple procedure (e.g. filtration)",pts:6.25},{tag:"Low",c:"r",text:"Extraction required",pts:3.125}]},
     {q:"Mode of sample collection / measurement",
      opts:[{tag:"High",c:"g",text:"In-line measurement",pts:12.5},{tag:"Acceptable",c:"y",text:"On-line or at-line",pts:6.25},{tag:"Low",c:"r",text:"Off-line",pts:3.125}]},
-    {q:"Instrumentation: energy consumption and occupational hazard",
-     opts:[{tag:"High",c:"g",text:"\u22640.1 kWh/sample; hermetic sealing \u2014 no vapor emission",pts:12.5},
-           {tag:"Acceptable",c:"y",text:"~1.5 kWh/sample; moderate occupational exposure",pts:6.25},
-           {tag:"Low",c:"r",text:">1.5 kWh/sample; emission of vapors to atmosphere",pts:3.125}]},
-    {q:"Waste: volume generated and treatment applied",
-     opts:[{tag:"High",c:"g",text:"<1 mL (g); recycling treatment",pts:12.5},{tag:"Acceptable",c:"y",text:"1\u201310 mL (g); degradation or passivation",pts:6.25},{tag:"Low",c:"r",text:">10 mL (g); no treatment",pts:3.125}]},
-    {q:"Reagents and solvents: amount and type",
-     opts:[{tag:"High",c:"g",text:"<10 mL (<10 g); solvent-free or green solvents only",pts:12.5},
-           {tag:"Acceptable",c:"y",text:"10\u2013100 mL (10\u2013100 g); green solvents and reagents",pts:6.25},
-           {tag:"Low",c:"r",text:">100 mL (>100 g); non-green solvents and reagents",pts:3.125}]},
-    {q:"Chemical hazard profile (NFPA health and safety scores)",
-     opts:[{tag:"High",c:"g",text:"Health hazard 0\u20131; flammability/instability 0\u20131",pts:12.5},
-           {tag:"Acceptable",c:"y",text:"Health or safety score 2\u20133",pts:6.25},
-           {tag:"Low",c:"r",text:"Health hazard 4; flammability/instability 4",pts:3.125}]}
+    {q:"Instrumentation",split:true,
+     parts:[
+       {label:"Energy consumption",opts:[{tag:"High",c:"g",text:"\u22640.1 kWh/sample",pts:6.25},{tag:"Acceptable",c:"y",text:"~1.5 kWh/sample",pts:3.125},{tag:"Low",c:"r",text:">1.5 kWh/sample",pts:1.5625}]},
+       {label:"Occupational hazard",opts:[{tag:"High",c:"g",text:"Hermetic sealing \u2014 no vapor emission",pts:6.25},{tag:"Acceptable",c:"y",text:"Moderate occupational exposure",pts:3.125},{tag:"Low",c:"r",text:"Emission of vapors to atmosphere",pts:1.5625}]}
+     ]},
+    {q:"Waste",split:true,
+     parts:[
+       {label:"Volume generated",opts:[{tag:"High",c:"g",text:"<1 mL (g)",pts:6.25},{tag:"Acceptable",c:"y",text:"1\u201310 mL (g)",pts:3.125},{tag:"Low",c:"r",text:">10 mL (g)",pts:1.5625}]},
+       {label:"Waste applied (treatment)",opts:[{tag:"High",c:"g",text:"Recycling treatment",pts:6.25},{tag:"Acceptable",c:"y",text:"Degradation or passivation",pts:3.125},{tag:"Low",c:"r",text:"No treatment",pts:1.5625}]}
+     ]},
+    {q:"Reagents and solvents",split:true,
+     parts:[
+       {label:"Amount",opts:[{tag:"High",c:"g",text:"<10 mL (<10 g)",pts:6.25},{tag:"Acceptable",c:"y",text:"10\u2013100 mL (10\u2013100 g)",pts:3.125},{tag:"Low",c:"r",text:">100 mL (>100 g)",pts:1.5625}]},
+       {label:"Type",opts:[{tag:"High",c:"g",text:"Solvent-free or green solvents only",pts:6.25},{tag:"Acceptable",c:"y",text:"Green solvents and reagents",pts:3.125},{tag:"Low",c:"r",text:"Non-green solvents and reagents",pts:1.5625}]}
+     ]},
+    {q:"Chemical hazard profile (NFPA)",split:true,
+     parts:[
+       {label:"Health hazard",opts:[{tag:"High",c:"g",text:"0\u20131",pts:6.25},{tag:"Acceptable",c:"y",text:"2\u20133",pts:3.125},{tag:"Low",c:"r",text:"4",pts:1.5625}]},
+       {label:"Flammability/instability",opts:[{tag:"High",c:"g",text:"0\u20131",pts:6.25},{tag:"Acceptable",c:"y",text:"2\u20133",pts:3.125},{tag:"Low",c:"r",text:"4",pts:1.5625}]}
+     ]}
   ],
   A:[
     {q:"Type of analysis performed",
@@ -378,6 +394,7 @@ const QS={
 
 /* ═══════════════════════════════ STATE ═══════════════════════════════ */
 const ANS={I:{},G:{},A:{},P:{}};
+const SPLIT_TEMP={I:{},G:{},A:{},P:{}};
 const SFILL={g:'#16a34a',y:'#ffd304',r:'#dc2626',e:'#e5e7eb'};
 const COMP={g:{lbl:'High Compliance'},y:{lbl:'Acceptable'},r:{lbl:'Low Compliance'},n:{lbl:'\u2013'}};
 function compKey(s){return s===null?'n':s>75?'g':s>=50?'y':'r'}
@@ -391,10 +408,21 @@ function renderSec(k){
       <div class="qnum"><span>${qi+1}</span></div>
       <div class="qbody">
         <div class="qtxt">${q.q}</div>
+        ${q.split?`
+        <div class="qsplit">
+          ${q.parts.map((part,pi)=>`
+          <div class="qsplit-part">
+            <div class="qsplit-lbl">${part.label}</div>
+            <select class="qsel" id="qsel-${k}-${qi}-${pi}" onchange="pickSplit('${k}',${qi},${pi},this.value)">
+              <option value="">Select an answer…</option>
+              ${part.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+        </div>`:`
         <select class="qsel" id="qsel-${k}-${qi}" onchange="pick('${k}',${qi},this.value)">
           <option value="">Select an answer…</option>
           ${q.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
-        </select>
+        </select>`}
       </div>
     </div>`).join('');
 }
@@ -405,6 +433,27 @@ function pick(k,qi,val){
   else{
     const oi=+val,o=QS[k][qi].opts[oi];
     ANS[k][qi]={oi,c:o.c,pts:o.pts};
+  }
+  drawAllDiamonds();
+}
+
+function pickSplit(k,qi,part,val){
+  if(!SPLIT_TEMP[k][qi])SPLIT_TEMP[k][qi]={};
+  if(val===''){
+    delete SPLIT_TEMP[k][qi][part];
+    delete ANS[k][qi];
+  } else {
+    const oi=+val,o=QS[k][qi].parts[part].opts[oi];
+    SPLIT_TEMP[k][qi][part]={oi,c:o.c,pts:o.pts};
+    const t=SPLIT_TEMP[k][qi];
+    if(t[0]&&t[1]){
+      const pts=t[0].pts+t[1].pts;
+      const pct=pts/12.5*100;
+      const c=pct>75?'g':pct>=50?'y':'r';
+      ANS[k][qi]={oi:null,c,pts,split:true,parts:[t[0],t[1]]};
+    } else {
+      delete ANS[k][qi];
+    }
   }
   drawAllDiamonds();
 }
@@ -474,38 +523,37 @@ function drawSegDiamond(svgId,scale,showLabels){
   svg.innerHTML=h;
 }
 
-/* Draw score diamonds (middle panel in results — 4 solid-colored diamonds with score text) */
+/* Draw score diamonds (middle panel in results — 4 solid-colored diamonds with score text),
+   reusing the exact same positions/size (SUBS, H) as the segment-profile diamond so both stay identical in size */
 function drawScoreDiamond(svgId){
   const svg=document.getElementById(svgId);if(!svg)return;
-  /* Layout: I top-center, G right, A bottom-center, P left — same tight
-     spacing as the segment-profile diamond so the four touch, not spread out */
-  const SUB2={I:{cx:120,cy:55},G:{cx:175,cy:110},A:{cx:120,cy:165},P:{cx:65,cy:110}};
-  const H2=46;
   let h='';
-  Object.entries(SUB2).forEach(([k,sub])=>{
+  Object.entries(SUBS).forEach(([k,sub])=>{
     const {cx,cy}=sub;
     const sc=calcScore(k);
     const fill=sc!==null?scoreColor(sc):'#e5e7eb';
-    h+=`<polygon points="${cx},${cy-H2} ${cx+H2},${cy} ${cx},${cy+H2} ${cx-H2},${cy}" fill="${fill}" stroke="white" stroke-width="2"/>`;
+    h+=`<polygon points="${cx},${cy-H} ${cx+H},${cy} ${cx},${cy+H} ${cx-H},${cy}" fill="${fill}" stroke="white" stroke-width="2"/>`;
     // score text (bigger, no "pts" label)
     if(sc!==null){
       h+=`<text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="15" font-weight="800" fill="white" font-family="Inter,sans-serif">${sc.toFixed(2)}</text>`;
     }
+    // border, matching the segment-profile diamond's outline
+    h+=`<polygon points="${cx},${cy-H} ${cx+H},${cy} ${cx},${cy+H} ${cx-H},${cy}" fill="none" stroke="#000" stroke-width="1"/>`;
     // letter label beside each sub-diamond (I/G/A/P), matching the segment profile
     const lp=SUB_LABEL_POS[k];
-    const lx=cx+lp.dx*(H2+12),ly=cy+lp.dy*(H2+12)+4;
+    const lx=cx+lp.dx*(H+12),ly=cy+lp.dy*(H+12)+4;
     h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="14" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${k}</text>`;
   });
-  // center circle shows the overall total IGAP score (no % sign, bigger number)
+  // center circle shows the overall total IGAP score (no % sign) — kept small so it doesn't overlap the diamonds
   const scores=['I','G','A','P'].map(k=>calcScore(k));
   const valid=scores.filter(s=>s!==null);
   if(valid.length>0){
     const avg=scores.reduce((s,v)=>s+(v||0),0)/4;
-    h+=`<circle cx="120" cy="110" r="15" fill="${scoreColor(avg)}" stroke="white" stroke-width="3"/>`;
-    h+=`<text x="120" y="114" text-anchor="middle" font-size="11" font-weight="800" fill="white" font-family="Inter,sans-serif">${avg.toFixed(1)}</text>`;
+    h+=`<circle cx="110" cy="110" r="10" fill="${scoreColor(avg)}" stroke="white" stroke-width="2.5"/>`;
+    h+=`<text x="110" y="113" text-anchor="middle" font-size="8" font-weight="800" fill="white" font-family="Inter,sans-serif">${avg.toFixed(1)}</text>`;
   } else {
-    h+=`<circle cx="120" cy="110" r="15" fill="white" stroke="#d1d5db" stroke-width="1.5"/>`;
-    h+=`<text x="120" y="113" text-anchor="middle" font-size="6.5" fill="#9ca3af" font-family="Inter,sans-serif">–</text>`;
+    h+=`<circle cx="110" cy="110" r="10" fill="white" stroke="#d1d5db" stroke-width="1.5"/>`;
+    h+=`<text x="110" y="113" text-anchor="middle" font-size="6" fill="#9ca3af" font-family="Inter,sans-serif">–</text>`;
   }
   svg.innerHTML=h;
 }
@@ -514,6 +562,7 @@ function drawAllDiamonds(){
   drawSegDiamond('live-svg',1,true);
   drawSegDiamond('res-seg-svg',1,true);
   drawScoreDiamond('res-score-svg');
+  drawScoreDiamond('live-score-svg');
 }
 
 /* ═══════════════════════════════ RESULTS UPDATE ══════════════════════ */
@@ -570,7 +619,7 @@ document.querySelectorAll('.step').forEach(b=>b.addEventListener('click',()=>goT
 /* ═══════════════════════════════ RESET ═══════════════════════════════ */
 function resetAll(){
   if(!confirm('Reset all 32 answers?'))return;
-  ['I','G','A','P'].forEach(k=>{ANS[k]={};renderSec(k)});
+  ['I','G','A','P'].forEach(k=>{ANS[k]={};SPLIT_TEMP[k]={};renderSec(k)});
   drawAllDiamonds();updateResults();
 }
 
@@ -687,7 +736,22 @@ function downloadPDF(){
       const qlines=doc.splitTextToSize((qi+1)+'. '+q.q,W-2*M-8);
       doc.text(qlines,M+6,y);y+=qlines.length*4.5+1;
       // Answer
-      if(ans){
+      if(ans&&q.split){
+        q.parts.forEach((part,pi)=>{
+          const pans=ans.parts[pi];
+          const opt=part.opts[pans.oi];
+          const oc=optColors[pans.c];
+          const ocLight=lighten(oc,0.85);
+          doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
+          doc.setDrawColor(oc[0],oc[1],oc[2]);
+          const alines=doc.splitTextToSize('\u25b6 '+part.label+' \u2014 '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
+          const ah=alines.length*4+4;
+          doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
+          doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
+          doc.text(alines,M+9,y+2.5);
+          y+=ah+3;
+        });
+      } else if(ans){
         const opt=q.opts[ans.oi];
         const oc=optColors[ans.c];
         const ocLight=lighten(oc,0.85);
