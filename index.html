@@ -114,6 +114,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .res-d-item{text-align:center;max-width:100%}
 .res-d-item svg{max-width:100%;height:auto}
 .res-d-label{font-size:.88rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:.5rem;color:var(--muted)}
+@media(max-width:560px){
+  .res-d-row{flex-wrap:nowrap;gap:.6rem}
+  .res-d-item{flex:1 1 0;min-width:0}
+  .res-d-label{font-size:.62rem}
+}
 
 /* SCORE CARDS */
 .rgrid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem}
@@ -125,7 +130,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .rcomp{display:inline-block;font-size:.72rem;font-weight:700;padding:.2rem .6rem;border-radius:999px;background:#f1f5f9;color:var(--ink)}
 .segrow{display:flex;gap:3px;margin-top:.8rem}
 .seg{flex:1;height:15px;border-radius:3px;background:var(--border)}
-.seg.answered{background:#94a3b8}
 
 .warnbox{background:#f1f5f9;border:1px solid var(--border);border-radius:9px;
   padding:.7rem 1rem;font-size:.8rem;color:var(--muted);margin-bottom:1rem}
@@ -611,7 +615,7 @@ function updateResults(){
     const cardEl=document.getElementById('card-'+k);
     cardEl.style.borderTopColor=sc!==null?scoreColor(sc):'var(--border)';
     let s='';
-    for(let i=0;i<8;i++){const a=ANS[k][i];s+=`<div class="seg ${a?'answered':''}"></div>`}
+    for(let i=0;i<8;i++){const a=ANS[k][i];s+=`<div class="seg" style="background:${a?SFILL[a.c]:'var(--border)'}"></div>`}
     document.getElementById('seg-'+k).innerHTML=s;
   });
   const scores=['I','G','A','P'].map(k=>calcScore(k));
