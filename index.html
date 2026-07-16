@@ -435,7 +435,7 @@ function renderSec(k){
             <div class="qgroup-lbl">${g.label}</div>
             ${g.examples?`<div class="qgroup-ex">${g.examples}</div>`:''}
             <select class="qsel" id="qsel-${k}-${qi}-g${gi}" onchange="pickGroup('${k}',${qi},${gi},this.value)">
-              ${g.opts.map((o,oi)=>`<option value="${oi}">${o.tag} (${o.pts}) — ${o.text}</option>`).join('')}
+              ${g.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
             </select>
           </div>`).join('')}
         </div>`:`
@@ -595,7 +595,7 @@ function drawAllDiamonds(){
   drawSegDiamond('live-svg',1,true);
   drawSegDiamond('res-seg-svg',1,true);
   drawScoreDiamond('res-score-svg',1,true);
-  drawScoreDiamond('live-score-svg',1,true,!SEC_ORDER.every(sectionComplete));
+  drawScoreDiamond('live-score-svg',1,true);
 }
 
 /* ═══════════════════════════════ RESULTS UPDATE ══════════════════════ */
