@@ -64,6 +64,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .qsplit-part{flex:1;min-width:160px;display:flex;flex-direction:column;gap:.35rem}
 .qsplit-lbl{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
 
+/* GROUPED QUESTIONS (several independent applications — pick the one that applies, then its tier) */
+.qgroups{display:flex;flex-direction:column;gap:.6rem}
+.qgroup{border:1.5px solid var(--border);border-radius:8px;padding:.6rem .7rem;display:flex;flex-direction:column;gap:.4rem}
+.qgroup-lbl{font-size:.78rem;font-weight:700;color:var(--ink)}
+.qgroup-ex{font-size:.7rem;color:var(--muted);font-style:italic;line-height:1.4}
+
 /* NEXT SECTION BUTTON */
 .next-btn{display:flex;align-items:center;justify-content:space-between;
   background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);
@@ -212,6 +218,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
     <!-- DOWNLOAD BUTTONS -->
     <div class="dl-row">
       <button class="dlbtn dlbtn-solid" onclick="downloadPNG()">&#128247; Download Diamond (PNG)</button>
+      <button class="dlbtn dlbtn-outline" onclick="copyImagePNG()">&#128203; Copy Image</button>
       <button class="dlbtn dlbtn-solid" onclick="downloadPDF()">&#128462; Download Full Report (PDF)</button>
       <button class="dlbtn dlbtn-outline" onclick="resetAll()">&#8635; Reset All</button>
     </div>
@@ -329,12 +336,12 @@ const QS={
      opts:[{tag:"High",c:"g",text:"Confirmatory and quantitative",pts:3},{tag:"Acceptable",c:"y",text:"Quantitative or screening only",pts:2},{tag:"Low",c:"r",text:"Qualitative only",pts:1}]},
     {q:"Number of analytes simultaneously determined",
      opts:[{tag:"High",c:"g",text:"\u226515 (same class) or \u226510 (different classes)",pts:3},
-           {tag:"Acceptable",c:"y",text:"6\u201314 (same class) or 3\u20139 (different classes)",pts:2},
+           {tag:"Acceptable",c:"y",text:"6\u201314 (same class) or 4\u20139 (different classes)",pts:2},
            {tag:"Low",c:"r",text:"\u22645 (same class) or \u22643 (different classes)",pts:1}]},
     {q:"Sample throughput (samples per hour)",
-     opts:[{tag:"High",c:"g",text:"\u226510 samples per hour",pts:3},{tag:"Acceptable",c:"y",text:"6\u201311 samples per hour",pts:2},{tag:"Low",c:"r",text:"\u22645 samples per hour",pts:1}]},
+     opts:[{tag:"High",c:"g",text:"\u226512 samples per hour",pts:3},{tag:"Acceptable",c:"y",text:"6\u201311 samples per hour",pts:2},{tag:"Low",c:"r",text:"\u22645 samples per hour",pts:1}]},
     {q:"Amount of sample required per analysis",
-     opts:[{tag:"High",c:"g",text:"\u2264100 \u00b5L or mg (bio) or \u226410 mL or g (other matrices)",pts:3},
+     opts:[{tag:"High",c:"g",text:"\u2264100 \u00b5L or mg (bio) or <10 mL or g (other matrices)",pts:3},
            {tag:"Acceptable",c:"y",text:"101\u2013500 \u00b5L/mg (bio) or 10\u201320 mL/g (other)",pts:2},
            {tag:"Low",c:"r",text:">500 \u00b5L/mg (bio) or >20 mL/g (other)",pts:1}]},
     {q:"Matrix flexibility of the method",
@@ -364,11 +371,17 @@ const QS={
      opts:[{tag:"High",c:"g",text:"< 3% of expected mean analyte concentration",pts:3},
            {tag:"Acceptable",c:"y",text:"3\u201310% of expected mean analyte concentration",pts:2},
            {tag:"Low",c:"r",text:"> 10% of expected mean analyte concentration",pts:1}]},
-    {q:"Repeatability",
-     opts:[
-       {tag:"High",c:"g",text:"RSD \u2264 2% (major component analysis, simple matrices \u2014 e.g. pharmaceutical assay, API assay, food major components) or RSD \u2264 5% (trace analysis, simple/moderately complex matrices \u2014 e.g. pharmaceutical impurities, residual solvents, elemental impurities, additives) or RSD \u2264 15% (trace analysis, complex matrices \u2014 e.g. environmental water/soil/sludge; biological fluids; food contaminants; forensic/clinical toxicology)",pts:3},
-       {tag:"Acceptable",c:"y",text:"RSD > 2\u20135% (major component, simple matrices) or RSD > 5\u201310% (trace, simple/moderately complex matrices) or RSD > 15\u201320% (trace, complex matrices)",pts:2},
-       {tag:"Low",c:"r",text:"RSD > 5% (major component, simple matrices) or RSD > 10% (trace, simple/moderately complex matrices) or RSD > 20% (trace, complex matrices)",pts:1}
+    {q:"Repeatability / Intermediate Precision",
+     groups:[
+       {label:"Major component analysis \u2014 simple matrices",
+        examples:"e.g. pharmaceutical assay, API assay, food major components",
+        opts:[{tag:"High",c:"g",text:"RSD \u22642%",pts:3},{tag:"Acceptable",c:"y",text:"RSD >2\u20135%",pts:2},{tag:"Low",c:"r",text:"RSD >5%",pts:1}]},
+       {label:"Trace analysis \u2014 simple/moderately complex matrices",
+        examples:"e.g. pharmaceutical impurities, residual solvents, elemental impurities, additives",
+        opts:[{tag:"High",c:"g",text:"RSD \u22645%",pts:3},{tag:"Acceptable",c:"y",text:"RSD >5\u201310%",pts:2},{tag:"Low",c:"r",text:"RSD >10%",pts:1}]},
+       {label:"Trace analysis \u2014 complex matrices",
+        examples:"e.g. environmental water, soil, sludge; biological fluids (plasma, serum, urine); food contaminants (pesticides, mycotoxins, veterinary drugs); forensic samples; clinical toxicology",
+        opts:[{tag:"High",c:"g",text:"RSD \u226415%",pts:3},{tag:"Acceptable",c:"y",text:"RSD >15\u201320%",pts:2},{tag:"Low",c:"r",text:"RSD >20%",pts:1}]}
      ]},
     {q:"Working range",
      opts:[{tag:"High",c:"g",text:"Wider than 100 \u00d7 LOQ",pts:3},{tag:"Acceptable",c:"y",text:"Wider than 50 \u00d7 LOQ",pts:2},{tag:"Low",c:"r",text:"Wider than 5 \u00d7 LOQ",pts:1}]},
@@ -396,6 +409,7 @@ const SFILL={g:'#16a34a',y:'#ffd304',r:'#dc2626',e:'#e5e7eb'};
 const COMP={g:{lbl:'High Compliance'},y:{lbl:'Acceptable'},r:{lbl:'Low Compliance'},n:{lbl:'\u2013'}};
 function compKey(s){return s===null?'n':s>75?'g':s>=50?'y':'r'}
 function scoreColor(s){return s>75?'#16a34a':s>=50?'#ffd304':'#dc2626'}
+function textOnFill(tag){return tag==='y'?'#1e293b':'#fff'}
 
 /* ═══════════════════════════════ RENDER QUESTIONS ════════════════════ */
 function renderSec(k){
@@ -412,6 +426,16 @@ function renderSec(k){
             <div class="qsplit-lbl">${part.label}</div>
             <select class="qsel" id="qsel-${k}-${qi}-${pi}" onchange="pickSplit('${k}',${qi},${pi},this.value)">
               ${part.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+        </div>`:q.groups?`
+        <div class="qgroups">
+          ${q.groups.map((g,gi)=>`
+          <div class="qgroup">
+            <div class="qgroup-lbl">${g.label}</div>
+            ${g.examples?`<div class="qgroup-ex">${g.examples}</div>`:''}
+            <select class="qsel" id="qsel-${k}-${qi}-g${gi}" onchange="pickGroup('${k}',${qi},${gi},this.value)">
+              ${g.opts.map((o,oi)=>`<option value="${oi}">${o.tag} (${o.pts}) — ${o.text}</option>`).join('')}
             </select>
           </div>`).join('')}
         </div>`:`
@@ -446,9 +470,25 @@ function pickSplit(k,qi,part,val){
   }
   drawAllDiamonds();
 }
+
+/* Grouped question: several independent applications (e.g. matrix types), only one
+   applies at a time — picking an option in one group clears the other groups' selects */
+function pickGroup(k,qi,gi,val){
+  const q=QS[k][qi];
+  const oi=+val,o=q.groups[gi].opts[oi];
+  ANS[k][qi]={oi,gi,c:o.c,pts:o.pts,tag:o.tag,text:o.text,groupLabel:q.groups[gi].label};
+  q.groups.forEach((g,idx)=>{
+    if(idx!==gi){
+      const sel=document.getElementById(`qsel-${k}-${qi}-g${idx}`);
+      if(sel)sel.selectedIndex=-1;
+    }
+  });
+  drawAllDiamonds();
+}
 function sectionMaxPts(k){
   return QS[k].reduce((sum,q)=>{
     if(q.split)return sum+q.parts.reduce((s,part)=>s+Math.max(...part.opts.map(o=>o.pts)),0);
+    if(q.groups)return sum+Math.max(...q.groups.flatMap(g=>g.opts.map(o=>o.pts)));
     return sum+Math.max(...q.opts.map(o=>o.pts));
   },0);
 }
@@ -505,7 +545,7 @@ function drawSegDiamond(svgId,scale,showLabels){
     segPaths(cx,cy,hs).forEach((seg,i)=>{
       const ans=ANS[k][i];
       h+=`<path d="${seg.d}" fill="${ans?SFILL[ans.c]:SFILL.e}" stroke="white" stroke-width="${1.2*s}" stroke-linejoin="round"/>`;
-      h+=`<text x="${seg.lx}" y="${seg.ly+3*s}" text-anchor="middle" font-size="${6.5*s}" font-weight="700" fill="${ans?'#fff':'#9ca3af'}" font-family="Inter,sans-serif">${i+1}</text>`;
+      h+=`<text x="${seg.lx}" y="${seg.ly+3*s}" text-anchor="middle" font-size="${9*s}" font-weight="700" fill="${ans?textOnFill(ans.c):'#9ca3af'}" font-family="Inter,sans-serif">${i+1}</text>`;
     });
     // border
     h+=`<polygon points="${cx},${cy-hs} ${cx+hs},${cy} ${cx},${cy+hs} ${cx-hs},${cy}" fill="none" stroke="#000" stroke-width="${1*s}"/>`;
@@ -524,17 +564,17 @@ function drawSegDiamond(svgId,scale,showLabels){
    section, each showing its own score, arranged I=top, G=right, A=bottom, P=left —
    reusing the exact same positions/size (SUBS, H) as the segment-profile diamond so both
    stay identical in size), with a white circle in the center showing the overall total */
-function drawScoreDiamond(svgId,scale,showLabels,locked){
+function drawScoreDiamond(svgId,scale,showLabels,lockTotal){
   const svg=document.getElementById(svgId);if(!svg)return;
   const s=scale||1;
   const scores={};
-  ['I','G','A','P'].forEach(k=>scores[k]=locked?null:calcScore(k));
+  ['I','G','A','P'].forEach(k=>scores[k]=calcScore(k));
   let h='';
   Object.entries(SUBS).forEach(([k,sub])=>{
     const cx=sub.cx*s,cy=sub.cy*s,hs=H*s;
     const sc=scores[k];
     const fill=sc!==null?scoreColor(sc):SFILL.e;
-    const txtFill=sc!==null?'#fff':'#9ca3af';
+    const txtFill=sc!==null?textOnFill(compKey(sc)):'#9ca3af';
     h+=`<polygon points="${cx},${cy-hs} ${cx+hs},${cy} ${cx},${cy+hs} ${cx-hs},${cy}" fill="${fill}" stroke="#000" stroke-width="${1.5*s}" stroke-linejoin="round"/>`;
     h+=`<text x="${cx}" y="${cy+6*s}" text-anchor="middle" font-size="${15*s}" font-weight="800" fill="${txtFill}" font-family="Inter,sans-serif">${sc!==null?sc.toFixed(2):'–'}</text>`;
     if(showLabels){
@@ -545,9 +585,9 @@ function drawScoreDiamond(svgId,scale,showLabels,locked){
   });
   const scoresArr=['I','G','A','P'].map(k=>scores[k]);
   const valid=scoresArr.filter(v=>v!==null);
-  const avg=valid.length>0?scoresArr.reduce((s,v)=>s+(v||0),0)/4:null;
+  const avg=(!lockTotal&&valid.length>0)?scoresArr.reduce((s,v)=>s+(v||0),0)/4:null;
   h+=`<circle cx="${110*s}" cy="${110*s}" r="${22*s}" fill="white" stroke="#1e293b" stroke-width="${2*s}"/>`;
-  h+=`<text x="${110*s}" y="${110*s+7*s}" text-anchor="middle" font-size="${20*s}" font-weight="800" fill="#0f172a" font-family="Inter,sans-serif">${avg!==null?avg.toFixed(1):'–'}</text>`;
+  h+=`<text x="${110*s}" y="${110*s+5*s}" text-anchor="middle" font-size="${15*s}" font-weight="800" fill="#0f172a" font-family="Inter,sans-serif">${avg!==null?avg.toFixed(1):'–'}</text>`;
   svg.innerHTML=h;
 }
 
@@ -555,10 +595,7 @@ function drawAllDiamonds(){
   drawSegDiamond('live-svg',1,true);
   drawSegDiamond('res-seg-svg',1,true);
   drawScoreDiamond('res-score-svg',1,true);
-  const allDone=SEC_ORDER.every(sectionComplete);
-  drawScoreDiamond('live-score-svg',1,true,!allDone);
-  const liveLbl=document.getElementById('live-score-label');
-  if(liveLbl)liveLbl.textContent=allDone?'Scores':'Scores (complete all 32 questions to reveal)';
+  drawScoreDiamond('live-score-svg',1,true,!SEC_ORDER.every(sectionComplete));
 }
 
 /* ═══════════════════════════════ RESULTS UPDATE ══════════════════════ */
@@ -618,49 +655,68 @@ function resetAll(){
   drawAllDiamonds();updateResults();
 }
 
-/* ═══════════════════════════════ DOWNLOAD PNG ════════════════════════
-   Serialize the three result SVGs onto a canvas and download
+/* ═══════════════════════════════ DOWNLOAD / COPY PNG ═════════════════
+   Serialize the two result SVGs onto a canvas, rendered at EXPORT_SCALE×
+   so text stays sharp when zoomed, printed, or pasted elsewhere.
 ════════════════════════════════════════════════════════════════════════ */
-function downloadPNG(){
-  updateResults();
-  setTimeout(()=>{
-    const area=document.getElementById('diamond-export-area');
-    const svgs=area.querySelectorAll('svg');
-    const canvas=document.getElementById('dl-canvas');
-    const W=520,H2=300;
-    canvas.width=W;canvas.height=H2;
-    const ctx=canvas.getContext('2d');
-    ctx.fillStyle='white';ctx.fillRect(0,0,W,H2);
-    // title
-    ctx.fillStyle='#0f172a';ctx.font='bold 16px Inter,sans-serif';
-    ctx.textAlign='center';ctx.fillText('IGAP Diamond Profile',W/2,28);
+const EXPORT_SCALE=3;
+function buildDiamondCanvas(scale){
+  return new Promise(resolve=>{
+    updateResults();
+    setTimeout(()=>{
+      const area=document.getElementById('diamond-export-area');
+      const svgs=area.querySelectorAll('svg');
+      const canvas=document.getElementById('dl-canvas');
+      const W=520*scale,H2=300*scale;
+      canvas.width=W;canvas.height=H2;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='white';ctx.fillRect(0,0,W,H2);
+      // title
+      ctx.fillStyle='#0f172a';ctx.font=`bold ${16*scale}px Inter,sans-serif`;
+      ctx.textAlign='center';ctx.fillText('IGAP Diamond Profile',W/2,28*scale);
 
-    const positions=[
-      {x:10,y:40,w:240,h:240},
-      {x:270,y:50,w:240,h:220}
-    ];
-    let done=0;
-    svgs.forEach((svg,i)=>{
-      const clone=svg.cloneNode(true);
-      const xmls=new XMLSerializer().serializeToString(clone);
-      const blob=new Blob([xmls],{type:'image/svg+xml'});
-      const url=URL.createObjectURL(blob);
-      const img=new Image();
-      img.onload=function(){
-        const p=positions[i];
-        ctx.drawImage(img,p.x,p.y,p.w,p.h);
-        URL.revokeObjectURL(url);
-        done++;
-        if(done===svgs.length){
-          const a=document.createElement('a');
-          a.download='IGAP_Diamond.png';
-          a.href=canvas.toDataURL('image/png');
-          a.click();
-        }
-      };
-      img.src=url;
-    });
-  },300);
+      const positions=[
+        {x:10*scale,y:40*scale,w:240*scale,h:240*scale},
+        {x:270*scale,y:50*scale,w:240*scale,h:220*scale}
+      ];
+      let done=0;
+      svgs.forEach((svg,i)=>{
+        const clone=svg.cloneNode(true);
+        const xmls=new XMLSerializer().serializeToString(clone);
+        const blob=new Blob([xmls],{type:'image/svg+xml'});
+        const url=URL.createObjectURL(blob);
+        const img=new Image();
+        img.onload=function(){
+          const p=positions[i];
+          ctx.drawImage(img,p.x,p.y,p.w,p.h);
+          URL.revokeObjectURL(url);
+          done++;
+          if(done===svgs.length)resolve(canvas);
+        };
+        img.src=url;
+      });
+    },300);
+  });
+}
+
+function downloadPNG(){
+  buildDiamondCanvas(EXPORT_SCALE).then(canvas=>{
+    const a=document.createElement('a');
+    a.download='IGAP_Diamond.png';
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+  });
+}
+
+function copyImagePNG(){
+  if(!navigator.clipboard||!window.ClipboardItem){
+    alert('Copying images isn\'t supported in this browser — please use Download instead.');
+    return;
+  }
+  const blobPromise=buildDiamondCanvas(EXPORT_SCALE).then(canvas=>new Promise(res=>canvas.toBlob(res,'image/png')));
+  navigator.clipboard.write([new ClipboardItem({'image/png':blobPromise})])
+    .then(()=>alert('Diamond image copied — you can paste it anywhere (Ctrl/Cmd+V).'))
+    .catch(()=>alert('Could not copy the image automatically — please use Download instead.'));
 }
 
 /* ═══════════════════════════════ DOWNLOAD PDF ════════════════════════ */
@@ -746,6 +802,17 @@ function downloadPDF(){
           doc.text(alines,M+9,y+2.5);
           y+=ah+3;
         });
+      } else if(ans&&q.groups){
+        const oc=optColors[ans.c];
+        const ocLight=lighten(oc,0.85);
+        doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
+        doc.setDrawColor(oc[0],oc[1],oc[2]);
+        const alines=doc.splitTextToSize('\u25b6 '+ans.groupLabel+' \u2014 '+ans.tag+': '+ans.text+' ('+ans.pts+' pts)',W-2*M-12);
+        const ah=alines.length*4+4;
+        doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
+        doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
+        doc.text(alines,M+9,y+2.5);
+        y+=ah+3;
       } else if(ans){
         const opt=q.opts[ans.oi];
         const oc=optColors[ans.c];
@@ -766,10 +833,6 @@ function downloadPDF(){
     });
     y+=4;
   });
-
-  // Footer
-  doc.setFont('helvetica','italic');doc.setFontSize(8);doc.setTextColor(150,150,150);
-  doc.text('IGAP Diamond Tool \u00b7 Inspired by the GAPI framework',W/2,290,{align:'center'});
 
   doc.save('IGAP_Full_Report.pdf');
 }
