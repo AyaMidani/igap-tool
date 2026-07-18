@@ -14,6 +14,7 @@
   --shadow:0 2px 14px rgba(0,0,0,.07);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
 
 /* HERO (neutral dark, no color tint — just the title) */
@@ -54,6 +55,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .qnum span{transform:rotate(-45deg);color:var(--ink);font-size:.68rem;font-weight:700}
 .qbody{flex:1;display:flex;flex-direction:column;gap:.45rem}
 .qtxt{font-size:.85rem;font-weight:600;color:var(--ink);line-height:1.4}
+.qnote-link{background:none;border:none;cursor:pointer;font-size:.78rem;padding:0;line-height:1;vertical-align:middle}
+.qnotes{padding:0 1rem}
+.qnote{display:none;font-size:.74rem;color:var(--muted);line-height:1.5;padding:.6rem .7rem;margin:.7rem 0;background:#fef9c3;border-radius:8px;scroll-margin-top:16px}
+.qnote.open{display:block}
 
 .qsel{width:100%;padding:.55rem .65rem;border:1.5px solid var(--border);border-radius:8px;
   font-family:'Inter',sans-serif;font-size:.78rem;color:var(--ink);background:var(--white);cursor:pointer}
@@ -329,9 +334,11 @@ const QS={
     {q:"Volume of solvents",
      opts:[{tag:"High",c:"g",text:"< 10 mL (< 10 g)",pts:3},{tag:"Acceptable",c:"y",text:"10\u201320 mL (10\u201320 g)",pts:2},{tag:"Low",c:"r",text:"> 20 mL (> 20 g)",pts:1}]},
     {q:"Overall hazard of solvents and reagents used",
-     opts:[{tag:"High",c:"g",text:"No GHS hazard pictograms or only green solvents",pts:3},{tag:"Acceptable",c:"y",text:"Limited hazard profile (1\u20133 GHS pictograms across all chemicals)",pts:2},{tag:"Low",c:"r",text:"High hazard profile (>3 GHS pictograms) or any CMR chemical",pts:1}]},
+     opts:[{tag:"High",c:"g",text:"No hazard pictograms or <3 GHS pictograms across all chemicals",pts:3},{tag:"Acceptable",c:"y",text:"Limited hazard profile (3\u20135 GHS pictograms across all chemicals)",pts:2},{tag:"Low",c:"r",text:"High hazard profile (>5 GHS pictograms) or any CMR chemical",pts:1}]},
     {q:"Energy consumption",
-     opts:[{tag:"High",c:"g",text:"\u2264 0.1 kWh/sample",pts:3},{tag:"Acceptable",c:"y",text:"0.1\u20131.5 kWh/sample",pts:2},{tag:"Low",c:"r",text:"> 1.5 kWh/sample",pts:1}]},
+     opts:[{tag:"High",c:"g",text:"\u22640.1 kWh/sample (e.g. UV\u2013Vis, FTIR, Raman, NIR, potentiometry, electrochemical methods, titration, smartphone analysis)",pts:3},
+           {tag:"Acceptable",c:"y",text:"0.1\u20131.5 kWh/sample (e.g. HPLC/UHPLC, GC, CE, IC, FAAS, ETAAS, ICP-OES, standalone MS)",pts:2},
+           {tag:"Low",c:"r",text:"> 1.5 kWh/sample (e.g. LC\u2013MS/MS, GC\u2013MS/MS, ICP-MS, HRMS, NMR, XRD)",pts:1}]},
     {q:"Waste volume",
      opts:[{tag:"High",c:"g",text:"< 1 mL (g)",pts:3},{tag:"Acceptable",c:"y",text:"1\u201310 mL (g)",pts:2},{tag:"Low",c:"r",text:"> 10 mL (g)",pts:1}]}
   ],
@@ -366,12 +373,13 @@ const QS={
   ],
   P:[
     {q:"Optimization approach",
-     opts:[{tag:"High",c:"g",text:"Advanced optimization (AQbD, DoE, AI-assisted or equivalent multivariate approaches)",pts:3},
-           {tag:"Acceptable",c:"y",text:"Conventional optimization",pts:2},
-           {tag:"Low",c:"r",text:"Limited optimization (OFAT) or not reported",pts:1}]},
+     opts:[{tag:"High",c:"g",text:"Advanced optimization (Analytical Quality by Design, Design of Experiments, AI-assisted, or other multivariate optimization approaches)",pts:3},
+           {tag:"Acceptable",c:"y",text:"Systematic conventional optimization (multiple factors optimized sequentially using experimental trials)",pts:2},
+           {tag:"Low",c:"r",text:"Limited optimization (only one or a few factors optimized, e.g. One Factor At a Time) or the optimization strategy was not reported",pts:1}]},
     {q:"Linearity of the calibration curve",
      opts:[{tag:"High",c:"g",text:"r\u00b2 \u2265 0.99",pts:3},{tag:"Acceptable",c:"y",text:"r\u00b2 > 0.95 and < 0.99",pts:2},{tag:"Low",c:"r",text:"r\u00b2 < 0.95",pts:1}]},
     {q:"Limit of Quantification (LOQ)",
+     note:"For example, the target concentration is defined according to the sample matrix, such as the maximum permissible concentration for environmental water, the maximum residue limit (MRL) for food, and the label claim concentration for pharmaceutical products.",
      opts:[{tag:"High",c:"g",text:"< 3% of expected mean analyte concentration",pts:3},
            {tag:"Acceptable",c:"y",text:"3\u201310% of expected mean analyte concentration",pts:2},
            {tag:"Low",c:"r",text:"> 10% of expected mean analyte concentration",pts:1}]},
@@ -422,7 +430,7 @@ function renderSec(k){
     <div class="qrow">
       <div class="qnum"><span>${qi+1}</span></div>
       <div class="qbody">
-        <div class="qtxt">${q.q}</div>
+        <div class="qtxt">${q.q}${q.note?` <button type="button" class="qnote-link" title="See example" onclick="toggleNote('${k}',${qi})">&#128269;</button>`:''}</div>
         ${q.split?`
         <div class="qsplit">
           ${q.parts.map((part,pi)=>`
@@ -447,8 +455,18 @@ function renderSec(k){
           ${q.opts.map((o,oi)=>`<option value="${oi}">${o.text}</option>`).join('')}
         </select>`}
       </div>
-    </div>`).join('');
+    </div>`).join('')+(QS[k].some(q=>q.note)?`
+    <div class="qnotes">
+      ${QS[k].map((q,qi)=>q.note?`<div class="qnote" id="note-${k}-${qi}">&#128269; <b>Note (Q${qi+1}):</b> ${q.note}</div>`:'').join('')}
+    </div>`:'');
   el.querySelectorAll('select').forEach(s=>{s.selectedIndex=-1;});
+}
+
+function toggleNote(k,qi){
+  const el=document.getElementById(`note-${k}-${qi}`);
+  if(!el)return;
+  el.classList.toggle('open');
+  if(el.classList.contains('open'))el.scrollIntoView({behavior:'smooth',block:'center'});
 }
 ['I','G','A','P'].forEach(renderSec);
 
@@ -510,7 +528,7 @@ function calcScore(k){
    I:(110,55) G:(165,110) A:(110,165) P:(55,110)
 ════════════════════════════════════════════════════════════════════════ */
 const H=46;
-const SUBS={I:{cx:110,cy:55},G:{cx:165,cy:110},A:{cx:110,cy:165},P:{cx:55,cy:110}};
+const SUBS={I:{cx:110,cy:55},G:{cx:165,cy:110},P:{cx:110,cy:165},A:{cx:55,cy:110}};
 
 function segPaths(cx,cy,h){
   const T=[cx,cy-h],R=[cx+h,cy],B=[cx,cy+h],L=[cx-h,cy],C=[cx,cy];
@@ -531,8 +549,8 @@ function segPaths(cx,cy,h){
 const SUB_LABEL_POS={
   I:{dx:0,dy:-1,anchor:'middle'},
   G:{dx:1,dy:0,anchor:'start'},
-  A:{dx:0,dy:1,anchor:'middle'},
-  P:{dx:-1,dy:0,anchor:'end'}
+  P:{dx:0,dy:1,anchor:'middle'},
+  A:{dx:-1,dy:0,anchor:'end'}
 };
 function drawSegDiamond(svgId,scale,showLabels){
   const svg=document.getElementById(svgId);if(!svg)return;
@@ -799,7 +817,7 @@ function downloadPDF(){
           const ocLight=lighten(oc,0.85);
           doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
           doc.setDrawColor(oc[0],oc[1],oc[2]);
-          const alines=doc.splitTextToSize('\u25b6 '+part.label+' \u2014 '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
+          const alines=doc.splitTextToSize('- '+part.label+' \u2014 '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
           const ah=alines.length*4+4;
           doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
           doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
@@ -811,7 +829,7 @@ function downloadPDF(){
         const ocLight=lighten(oc,0.85);
         doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
         doc.setDrawColor(oc[0],oc[1],oc[2]);
-        const alines=doc.splitTextToSize('\u25b6 '+ans.groupLabel+' \u2014 '+ans.tag+': '+ans.text+' ('+ans.pts+' pts)',W-2*M-12);
+        const alines=doc.splitTextToSize('- '+ans.groupLabel+' \u2014 '+ans.tag+': '+ans.text+' ('+ans.pts+' pts)',W-2*M-12);
         const ah=alines.length*4+4;
         doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
         doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
@@ -823,7 +841,7 @@ function downloadPDF(){
         const ocLight=lighten(oc,0.85);
         doc.setFillColor(ocLight[0],ocLight[1],ocLight[2]);
         doc.setDrawColor(oc[0],oc[1],oc[2]);
-        const alines=doc.splitTextToSize('\u25b6 '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
+        const alines=doc.splitTextToSize('- '+opt.tag+': '+opt.text+' ('+opt.pts+' pts)',W-2*M-12);
         const ah=alines.length*4+4;
         doc.roundedRect(M+6,y-2,W-2*M-12,ah,1.5,1.5,'FD');
         doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(oc[0],oc[1],oc[2]);
