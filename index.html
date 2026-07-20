@@ -301,6 +301,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
       </div>
     </div>
 
+    <div class="tbanner">
+      <div>
+        <div class="teyebrow">Total Whiteness Score</div>
+        <div class="tbig" id="wtot">&#8211;</div>
+        <div class="tsub" id="wtsub">Average of Greenness, Analytical Performance &amp; Practicality (&divide;3)</div>
+        <span class="tcomp" id="wcomp">&#8211;</span>
+      </div>
+    </div>
+
     <!-- 4 SCORE CARDS -->
     <div class="rgrid">
       <div class="rcard" id="card-I"><h4>Innovation</h4><div class="rbig" id="rs-I">&#8211;</div><div class="segrow" id="seg-I"></div></div>
@@ -721,6 +730,14 @@ function updateResults(){
     const ck=compKey(avg),cc=COMP[ck];
     document.getElementById('tcomp').textContent=cc.lbl;
   }
+  const whiteScores=['G','P','A'].map(k=>calcScore(k));
+  const whiteValid=whiteScores.filter(s=>s!==null);
+  if(whiteValid.length){
+    const wavg=whiteScores.reduce((s,v)=>s+(v||0),0)/3;
+    document.getElementById('wtot').textContent=wavg.toFixed(1)+'%';
+    const wck=compKey(wavg),wcc=COMP[wck];
+    document.getElementById('wcomp').textContent=wcc.lbl;
+  }
 }
 
 /* ═══════════════════════════════ NAVIGATION (one section at a time) ═══
@@ -729,13 +746,13 @@ function updateResults(){
 const SEC_ORDER=['I','G','P','A'];
 function sectionComplete(k){return Object.keys(ANS[k]).length===QS[k].length;}
 function goTab(t){
-  const idx=SEC_ORDER.indexOf(t);
-  const mustBeDone=t==='R'?SEC_ORDER:SEC_ORDER.slice(0,idx);
-  const blocker=mustBeDone.find(k=>!sectionComplete(k));
-  if(blocker){
-    const names={I:'Innovation',G:'Greenness',P:'Analytical Performance',A:'Practicality'};
-    alert('Please answer all questions in the "'+names[blocker]+'" section before continuing.');
-    return;
+  if(t==='R'){
+    const blocker=SEC_ORDER.find(k=>!sectionComplete(k));
+    if(blocker){
+      const names={I:'Innovation',G:'Greenness',P:'Analytical Performance',A:'Practicality'};
+      alert('Please answer all questions in the "'+names[blocker]+'" section before viewing results.');
+      return;
+    }
   }
   document.querySelectorAll('.step').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
@@ -952,22 +969,27 @@ function downloadPDF(){
   const scores={I:calcScore('I'),G:calcScore('G'),A:calcScore('A'),P:calcScore('P')};
   const avg=Object.values(scores).filter(s=>s!==null).length>0?
     Object.values(scores).reduce((s,v)=>s+(v||0),0)/4:null;
+  const whiteScoresArr=[scores.G,scores.P,scores.A];
+  const whiteAvg=whiteScoresArr.filter(s=>s!==null).length>0?
+    whiteScoresArr.reduce((s,v)=>s+(v||0),0)/3:null;
 
-  doc.setFillColor(241,245,249);doc.roundedRect(M,y,W-2*M,28,3,3,'F');
+  doc.setFillColor(241,245,249);doc.roundedRect(M,y,W-2*M,34,3,3,'F');
   doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,23,42);
   doc.text('Overall IGAP Score: '+(avg?avg.toFixed(1)+'%':'Not complete'),M+4,y+8);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(100,116,139);
+  doc.text('Total Whiteness Score (Greenness + Analytical Performance + Practicality): '+(whiteAvg?whiteAvg.toFixed(1)+'%':'Not complete'),M+4,y+14);
   const secs=[['I','Innovation','#7c3aed'],['G','Greenness','#1e7d4f'],['P','Analytical Performance','#dc2626'],['A','Practicality','#2563eb']];
   const xStep=(W-2*M)/4;
   secs.forEach(([k,lbl],i)=>{
     const sc=scores[k];
     const xc=M+i*xStep+xStep/2;
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(100,116,139);
-    doc.text(lbl,xc,y+17,{align:'center'});
+    doc.text(lbl,xc,y+23,{align:'center'});
     doc.setFontSize(12);
     doc.setTextColor(15,23,42);
-    doc.text(sc?sc.toFixed(1)+'%':'–',xc,y+24,{align:'center'});
+    doc.text(sc?sc.toFixed(1)+'%':'–',xc,y+30,{align:'center'});
   });
-  y+=34;
+  y+=40;
 
   // Add diamond SVG as image
   doc.setFont('helvetica','bold');doc.setFontSize(12);doc.setTextColor(15,23,42);
