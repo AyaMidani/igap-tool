@@ -140,16 +140,51 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
   padding:.7rem 1rem;font-size:.8rem;color:var(--muted);margin-bottom:1rem}
 
 /* TOTAL BANNER (neutral) */
-.tbanner{background:linear-gradient(135deg,#111827,#1f2937);color:white;
-  border-radius:var(--radius);padding:1.8rem;box-shadow:0 4px 20px rgba(0,0,0,.18);
+.tbanner{background:var(--white);color:var(--ink);border:1px solid var(--border);
+  border-radius:var(--radius);padding:1.8rem;box-shadow:var(--shadow);
   margin-bottom:1.2rem;display:flex;align-items:center;gap:1.8rem;flex-wrap:wrap}
-.teyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;opacity:.55;margin-bottom:.3rem}
+.teyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.3rem}
 .tbig{font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;line-height:1}
-.tsub{font-size:.8rem;opacity:.55;margin-top:.3rem}
-.tcomp{display:inline-block;font-size:.8rem;font-weight:700;padding:.3rem .9rem;border-radius:999px;margin-top:.6rem;background:rgba(255,255,255,.12)}
+.tsub{font-size:.8rem;color:var(--muted);margin-top:.3rem}
+.tcomp{display:inline-block;font-size:.8rem;font-weight:700;padding:.3rem .9rem;border-radius:999px;margin-top:.6rem;background:#f1f5f9;color:var(--ink)}
 
 /* HIDDEN download canvas */
 #dl-canvas{display:none}
+
+/* RESULTS SUB-TABS (Results / Saved Calculations) */
+.subtabs{display:flex;gap:.4rem;margin-bottom:1.2rem}
+.subtab{padding:.55rem 1.1rem;border:1px solid var(--border);background:var(--white);
+  border-radius:9px;cursor:pointer;font-weight:600;font-size:.8rem;color:var(--muted);
+  font-family:'Inter',sans-serif;transition:all .15s}
+.subtab.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* SAVED CALCULATIONS LIST */
+.saved-wrap{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.5rem}
+.saved-wrap h3{font-family:'Playfair Display',serif;font-size:1.05rem;margin-bottom:.3rem}
+.saved-sub{font-size:.8rem;color:var(--muted);margin-bottom:1.2rem}
+.saved-item{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;
+  padding:.9rem 1.1rem;border:1px solid var(--border);border-radius:10px;margin-bottom:.7rem}
+.saved-item-name{font-weight:700;font-size:.9rem;color:var(--ink)}
+.saved-item-date{font-size:.72rem;color:var(--muted);margin-top:.15rem}
+.saved-item-score{font-size:.78rem;font-weight:700;padding:.3rem .8rem;border-radius:999px;background:#f1f5f9;color:var(--ink);white-space:nowrap}
+.saved-item-actions{display:flex;gap:.5rem}
+.savebtn{border:none;border-radius:7px;padding:.45rem .9rem;font-size:.75rem;font-weight:700;
+  cursor:pointer;font-family:'Inter',sans-serif}
+.savebtn-load{background:#2563eb;color:#fff}
+.savebtn-delete{background:#dc2626;color:#fff}
+.saved-empty{font-size:.82rem;color:var(--muted);text-align:center;padding:2.5rem 0}
+
+/* SAVE-NAME MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;
+  align-items:center;justify-content:center;z-index:1000;padding:1rem}
+.modal-box{background:#fff;border-radius:12px;padding:1.6rem;max-width:380px;width:100%;
+  box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.modal-box h3{font-family:'Playfair Display',serif;font-size:1.15rem;margin-bottom:.6rem;text-align:center}
+.modal-box p{font-size:.82rem;color:var(--muted);margin-bottom:.6rem}
+.modal-input{width:100%;padding:.6rem .7rem;border:1.5px solid var(--border);border-radius:8px;
+  font-family:'Inter',sans-serif;font-size:.85rem;margin-bottom:1.2rem}
+.modal-input:focus{outline:none;border-color:#94a3b8}
+.modal-actions{display:flex;justify-content:flex-end;gap:.6rem}
 </style>
 </head>
 <body>
@@ -211,6 +246,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 
   <!-- RESULTS -->
   <div class="panel" id="pR">
+    <div class="subtabs">
+      <button class="subtab active" id="subtab-results" onclick="showResultsSubtab('results')">Results</button>
+      <button class="subtab" id="subtab-saved" onclick="showResultsSubtab('saved')">&#128190; Saved Calculations</button>
+    </div>
+
+    <div id="results-view">
     <div class="rintro">
       <h3>Scoring Guide</h3>
       <p>Each of the 32 questions scores one segment. Total IGAP = average of all four diamonds.</p>
@@ -219,7 +260,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
         <span class="spill"><span class="sd" style="background:#ffd304"></span>Acceptable (Yellow) = 2 pts</span>
         <span class="spill"><span class="sd" style="background:#dc2626"></span>Low (Red) = 1 pt</span>
       </div>
-      <p style="margin-top:.6rem;font-size:.78rem"><strong>High</strong> &gt;75% &nbsp;&middot;&nbsp; <strong>Acceptable</strong> 50&ndash;75% &nbsp;&middot;&nbsp; <strong>Low</strong> &lt;50%</p>
+      <p style="margin-top:.6rem;font-size:.78rem"><strong>High</strong> &ge;75% &nbsp;&middot;&nbsp; <strong>Acceptable</strong> 50&ndash;75% &nbsp;&middot;&nbsp; <strong>Low</strong> &lt;50%</p>
     </div>
 
     <div id="warnbox" class="warnbox" style="display:none">&#9888; Some questions are unanswered. Complete all 32 for a full IGAP profile.</div>
@@ -229,6 +270,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
       <button class="dlbtn dlbtn-solid" onclick="downloadPNG()">&#128247; Download Diamond (PNG)</button>
       <button class="dlbtn dlbtn-outline" onclick="copyImagePNG()">&#128203; Copy Image</button>
       <button class="dlbtn dlbtn-solid" onclick="downloadPDF()">&#128462; Download Full Report (PDF)</button>
+      <button class="dlbtn dlbtn-outline" onclick="openSaveModal()">&#128190; Save Results</button>
       <button class="dlbtn dlbtn-outline" onclick="resetAll()">&#8635; Reset All</button>
     </div>
 
@@ -255,7 +297,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
         <div class="teyebrow">Overall IGAP Score</div>
         <div class="tbig" id="tot">&#8211;</div>
         <div class="tsub" id="tsub">Answer all 32 questions to calculate</div>
-        <span class="tcomp" id="tcomp" style="background:rgba(255,255,255,.1);color:rgba(255,255,255,.5)">&#8211;</span>
+        <span class="tcomp" id="tcomp">&#8211;</span>
       </div>
     </div>
 
@@ -265,6 +307,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
       <div class="rcard" id="card-G"><h4>Greenness</h4><div class="rbig" id="rs-G">&#8211;</div><div class="segrow" id="seg-G"></div></div>
       <div class="rcard" id="card-P"><h4>Analytical Performance</h4><div class="rbig" id="rs-P">&#8211;</div><div class="segrow" id="seg-P"></div></div>
       <div class="rcard" id="card-A"><h4>Practicality</h4><div class="rbig" id="rs-A">&#8211;</div><div class="segrow" id="seg-A"></div></div>
+    </div>
+    </div><!-- /results-view -->
+
+    <div id="saved-view" style="display:none">
+      <div class="saved-wrap">
+        <h3>Saved Calculations</h3>
+        <p class="saved-sub">View, load, or delete your previously saved IGAP calculations.</p>
+        <div id="saved-list"></div>
+      </div>
     </div>
   </div>
 
@@ -284,6 +335,18 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 </div><!-- /app -->
 
 <canvas id="dl-canvas"></canvas>
+
+<div class="modal-overlay" id="save-modal-overlay" style="display:none">
+  <div class="modal-box">
+    <h3>Save Calculation</h3>
+    <p>Enter a name for this calculation:</p>
+    <input type="text" id="save-name-input" class="modal-input"/>
+    <div class="modal-actions">
+      <button class="dlbtn dlbtn-outline" onclick="closeSaveModal()">Cancel</button>
+      <button class="dlbtn dlbtn-solid" onclick="confirmSaveCalculation()">Save</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ═══════════════════════════════ DATA ════════════════════════════════ */
@@ -334,7 +397,10 @@ const QS={
     {q:"Volume of solvents",
      opts:[{tag:"High",c:"g",text:"< 10 mL (< 10 g)",pts:3},{tag:"Acceptable",c:"y",text:"10\u201320 mL (10\u201320 g)",pts:2},{tag:"Low",c:"r",text:"> 20 mL (> 20 g)",pts:1}]},
     {q:"Overall hazard of solvents and reagents used",
-     opts:[{tag:"High",c:"g",text:"No hazard pictograms or <3 GHS pictograms across all chemicals",pts:3},{tag:"Acceptable",c:"y",text:"Limited hazard profile (3\u20135 GHS pictograms across all chemicals)",pts:2},{tag:"Low",c:"r",text:"High hazard profile (>5 GHS pictograms) or any CMR chemical",pts:1}]},
+     note:"Scoring: between 50% and 75% are considered acceptable. A score of 75% or higher indicates a high score; below 50% indicates a low score.",
+     opts:[{tag:"High",c:"g",text:"All solvents have no acute toxicity, no serious health hazards, and no CMR classification (e.g. water, ethanol, isopropanol, acetone, ethyl acetate)",pts:3},
+           {tag:"Acceptable",c:"y",text:"One or more solvents are classified for acute toxicity or serious health hazards, but none are CMR (e.g. methanol, acetonitrile, dichloromethane)",pts:2},
+           {tag:"Low",c:"r",text:"One or more solvents are CMR (e.g. benzene)",pts:1}]},
     {q:"Energy consumption",
      opts:[{tag:"High",c:"g",text:"\u22640.1 kWh/sample (e.g. UV\u2013Vis, FTIR, Raman, NIR, potentiometry, electrochemical methods, titration, smartphone analysis)",pts:3},
            {tag:"Acceptable",c:"y",text:"0.1\u20131.5 kWh/sample (e.g. HPLC/UHPLC, GC, CE, IC, FAAS, ETAAS, ICP-OES, standalone MS)",pts:2},
@@ -380,9 +446,9 @@ const QS={
      opts:[{tag:"High",c:"g",text:"r\u00b2 \u2265 0.99",pts:3},{tag:"Acceptable",c:"y",text:"r\u00b2 > 0.95 and < 0.99",pts:2},{tag:"Low",c:"r",text:"r\u00b2 < 0.95",pts:1}]},
     {q:"Limit of Quantification (LOQ)",
      note:"For example, the target concentration is defined according to the sample matrix, such as the maximum permissible concentration for environmental water, the maximum residue limit (MRL) for food, and the label claim concentration for pharmaceutical products.",
-     opts:[{tag:"High",c:"g",text:"< 3% of expected mean analyte concentration",pts:3},
-           {tag:"Acceptable",c:"y",text:"3\u201310% of expected mean analyte concentration",pts:2},
-           {tag:"Low",c:"r",text:"> 10% of expected mean analyte concentration",pts:1}]},
+     opts:[{tag:"High",c:"g",text:"< 3% of target concentration",pts:3},
+           {tag:"Acceptable",c:"y",text:"3\u201310% of target concentration",pts:2},
+           {tag:"Low",c:"r",text:"> 10% of target concentration",pts:1}]},
     {q:"Repeatability / Intermediate Precision",
      groups:[
        {label:"Major component analysis \u2014 simple matrices",
@@ -419,8 +485,8 @@ const ANS={I:{},G:{},A:{},P:{}};
 const SPLIT_TEMP={I:{},G:{},A:{},P:{}};
 const SFILL={g:'#16a34a',y:'#ffd304',r:'#dc2626',e:'#e5e7eb'};
 const COMP={g:{lbl:'High Compliance'},y:{lbl:'Acceptable'},r:{lbl:'Low Compliance'},n:{lbl:'\u2013'}};
-function compKey(s){return s===null?'n':s>75?'g':s>=50?'y':'r'}
-function scoreColor(s){return s>75?'#16a34a':s>=50?'#ffd304':'#dc2626'}
+function compKey(s){return s===null?'n':s>=75?'g':s>=50?'y':'r'}
+function scoreColor(s){return s>=75?'#16a34a':s>=50?'#ffd304':'#dc2626'}
 function textOnFill(tag){return tag==='y'?'#1e293b':'#fff'}
 
 /* ═══════════════════════════════ RENDER QUESTIONS ════════════════════ */
@@ -468,11 +534,16 @@ function toggleNote(k,qi){
   el.classList.toggle('open');
   if(el.classList.contains('open'))el.scrollIntoView({behavior:'smooth',block:'center'});
 }
+function closeNote(k,qi){
+  const el=document.getElementById(`note-${k}-${qi}`);
+  if(el)el.classList.remove('open');
+}
 ['I','G','A','P'].forEach(renderSec);
 
 function pick(k,qi,val){
   const oi=+val,o=QS[k][qi].opts[oi];
   ANS[k][qi]={oi,c:o.c,pts:o.pts};
+  closeNote(k,qi);
   drawAllDiamonds();
 }
 
@@ -490,6 +561,7 @@ function pickSplit(k,qi,part,val){
   } else {
     delete ANS[k][qi];
   }
+  if(ANS[k][qi])closeNote(k,qi);
   drawAllDiamonds();
 }
 
@@ -505,6 +577,7 @@ function pickGroup(k,qi,gi,val){
       if(sel)sel.selectedIndex=-1;
     }
   });
+  closeNote(k,qi);
   drawAllDiamonds();
 }
 function sectionMaxPts(k){
@@ -552,6 +625,9 @@ const SUB_LABEL_POS={
   P:{dx:0,dy:1,anchor:'middle'},
   A:{dx:-1,dy:0,anchor:'end'}
 };
+/* Data keys A/P are legacy (A=Practicality, P=Analytical Performance), but the letter
+   shown on the diamond should match the current names' initials (Analytical->A, Practicality->P) */
+const DISPLAY_LETTER={I:'I',G:'G',P:'A',A:'P'};
 function drawSegDiamond(svgId,scale,showLabels){
   const svg=document.getElementById(svgId);if(!svg)return;
   const s=scale||1;
@@ -575,7 +651,7 @@ function drawSegDiamond(svgId,scale,showLabels){
     if(showLabels){
       const lp=SUB_LABEL_POS[k];
       const lx=cx+lp.dx*(hs+12*s),ly=cy+lp.dy*(hs+12*s)+4*s;
-      h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${k}</text>`;
+      h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${DISPLAY_LETTER[k]}</text>`;
     }
   });
   h+=`<circle cx="${110*s}" cy="${110*s}" r="${8*s}" fill="white" stroke="#d1d5db" stroke-width="${1.5*s}"/>`;
@@ -598,11 +674,11 @@ function drawScoreDiamond(svgId,scale,showLabels,lockTotal){
     const fill=sc!==null?scoreColor(sc):SFILL.e;
     const txtFill=sc!==null?textOnFill(compKey(sc)):'#9ca3af';
     h+=`<polygon points="${cx},${cy-hs} ${cx+hs},${cy} ${cx},${cy+hs} ${cx-hs},${cy}" fill="${fill}" stroke="#000" stroke-width="${1.5*s}" stroke-linejoin="round"/>`;
-    h+=`<text x="${cx}" y="${cy+6*s}" text-anchor="middle" font-size="${15*s}" font-weight="800" fill="${txtFill}" font-family="Inter,sans-serif">${sc!==null?sc.toFixed(2):'–'}</text>`;
+    h+=`<text x="${cx}" y="${cy+6*s}" text-anchor="middle" font-size="${15*s}" font-weight="800" fill="${txtFill}" font-family="Inter,sans-serif">${sc!==null?sc.toFixed(1):'–'}</text>`;
     if(showLabels){
       const lp=SUB_LABEL_POS[k];
       const lx=cx+lp.dx*(hs+12*s),ly=cy+lp.dy*(hs+12*s)+4*s;
-      h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${k}</text>`;
+      h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${DISPLAY_LETTER[k]}</text>`;
     }
   });
   const scoresArr=['I','G','A','P'].map(k=>scores[k]);
@@ -675,6 +751,120 @@ function resetAll(){
   if(!confirm('Reset all 32 answers?'))return;
   ['I','G','A','P'].forEach(k=>{ANS[k]={};SPLIT_TEMP[k]={};renderSec(k)});
   drawAllDiamonds();updateResults();
+}
+
+/* ═══════════════════════════════ SAVED CALCULATIONS (localStorage) ═══
+   "Save Results" names + stores a full snapshot of the current answers in
+   the browser, listed under the "Saved Calculations" sub-tab with Load/Delete.
+════════════════════════════════════════════════════════════════════════ */
+const SAVED_KEY='igapSavedCalculations';
+function getSavedCalcs(){
+  try{return JSON.parse(localStorage.getItem(SAVED_KEY)||'[]')}catch(e){return[]}
+}
+function setSavedCalcs(list){localStorage.setItem(SAVED_KEY,JSON.stringify(list))}
+
+function openSaveModal(){
+  const input=document.getElementById('save-name-input');
+  input.value='Calculation '+new Date().toLocaleString();
+  document.getElementById('save-modal-overlay').style.display='flex';
+  input.focus();input.select();
+}
+function closeSaveModal(){
+  document.getElementById('save-modal-overlay').style.display='none';
+}
+function confirmSaveCalculation(){
+  const nameInput=document.getElementById('save-name-input');
+  const name=nameInput.value.trim()||('Calculation '+new Date().toLocaleString());
+  const scores={I:calcScore('I'),G:calcScore('G'),P:calcScore('P'),A:calcScore('A')};
+  const valid=Object.values(scores).filter(s=>s!==null);
+  const overall=valid.length>0?Object.values(scores).reduce((s,v)=>s+(v||0),0)/4:null;
+  const list=getSavedCalcs();
+  list.unshift({
+    id:Date.now(),
+    name,
+    savedAt:new Date().toISOString(),
+    ans:JSON.parse(JSON.stringify(ANS)),
+    scores,
+    overall
+  });
+  setSavedCalcs(list);
+  closeSaveModal();
+  showResultsSubtab('saved');
+}
+
+function showResultsSubtab(which){
+  const isSaved=which==='saved';
+  document.getElementById('results-view').style.display=isSaved?'none':'block';
+  document.getElementById('saved-view').style.display=isSaved?'block':'none';
+  document.getElementById('subtab-results').classList.toggle('active',!isSaved);
+  document.getElementById('subtab-saved').classList.toggle('active',isSaved);
+  if(isSaved)renderSavedList();
+}
+
+function renderSavedList(){
+  const list=getSavedCalcs();
+  const el=document.getElementById('saved-list');
+  if(list.length===0){
+    el.innerHTML='<div class="saved-empty">No saved calculations yet. Answer some questions and click "Save Results" to keep a snapshot here.</div>';
+    return;
+  }
+  el.innerHTML=list.map(item=>{
+    const dt=new Date(item.savedAt).toLocaleString();
+    const scoreTxt=item.overall!==null?item.overall.toFixed(1)+'%':'Incomplete';
+    return`<div class="saved-item">
+      <div>
+        <div class="saved-item-name">${item.name}</div>
+        <div class="saved-item-date">${dt}</div>
+      </div>
+      <span class="saved-item-score">IGAP: ${scoreTxt}</span>
+      <div class="saved-item-actions">
+        <button class="savebtn savebtn-load" onclick="loadSavedCalculation(${item.id})">&#8681; Load</button>
+        <button class="savebtn savebtn-delete" onclick="deleteSavedCalculation(${item.id})">&#128465; Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function restoreSelectsFromAns(k){
+  Object.entries(ANS[k]).forEach(([qiStr,ans])=>{
+    const qi=+qiStr,q=QS[k][qi];
+    if(!q)return;
+    if(q.split&&ans.parts){
+      ans.parts.forEach((p,pi)=>{
+        const sel=document.getElementById(`qsel-${k}-${qi}-${pi}`);
+        if(sel)sel.selectedIndex=p.oi;
+      });
+    } else if(q.groups&&ans.gi!==undefined&&ans.gi!==null){
+      const sel=document.getElementById(`qsel-${k}-${qi}-g${ans.gi}`);
+      if(sel)sel.selectedIndex=ans.oi;
+    } else if(ans.oi!==undefined&&ans.oi!==null){
+      const sel=document.getElementById(`qsel-${k}-${qi}`);
+      if(sel)sel.selectedIndex=ans.oi;
+    }
+  });
+}
+
+function loadSavedCalculation(id){
+  const item=getSavedCalcs().find(c=>c.id===id);
+  if(!item)return;
+  if(!confirm('Load "'+item.name+'"? This will replace your current answers.'))return;
+  ['I','G','P','A'].forEach(k=>{
+    ANS[k]=JSON.parse(JSON.stringify(item.ans[k]||{}));
+    SPLIT_TEMP[k]={};
+    renderSec(k);
+    restoreSelectsFromAns(k);
+  });
+  drawAllDiamonds();
+  updateResults();
+  showResultsSubtab('results');
+}
+
+function deleteSavedCalculation(id){
+  const item=getSavedCalcs().find(c=>c.id===id);
+  if(!item)return;
+  if(!confirm('Delete "'+item.name+'"?'))return;
+  setSavedCalcs(getSavedCalcs().filter(c=>c.id!==id));
+  renderSavedList();
 }
 
 /* ═══════════════════════════════ DOWNLOAD / COPY PNG ═════════════════
@@ -774,8 +964,7 @@ function downloadPDF(){
     doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(100,116,139);
     doc.text(lbl,xc,y+17,{align:'center'});
     doc.setFontSize(12);
-    const rgb=sc?scoreColor(sc).replace('#','').match(/../g).map(x=>parseInt(x,16)):[150,150,150];
-    doc.setTextColor(rgb[0],rgb[1],rgb[2]);
+    doc.setTextColor(15,23,42);
     doc.text(sc?sc.toFixed(1)+'%':'–',xc,y+24,{align:'center'});
   });
   y+=34;
@@ -786,17 +975,13 @@ function downloadPDF(){
 
   // Per-section Q&A
   const secNames={I:'Innovation',G:'Greenness',A:'Practicality',P:'Analytical Performance'};
-  const secCols={I:[124,58,237],G:[30,125,79],A:[37,99,235],P:[220,38,38]};
   const optColors={g:[22,163,74],y:[255,211,4],r:[220,38,38]};
   const lighten=(c,f)=>c.map(v=>Math.round(v+(255-v)*f));
 
   secs.forEach(([k,lbl])=>{
     if(y>260){doc.addPage();y=20}
     // Section header
-    const col=secCols[k];
-    doc.setFillColor(col[0],col[1],col[2]);
-    doc.roundedRect(M,y,W-2*M,9,2,2,'F');
-    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(15,23,42);
     const sc=scores[k];
     doc.text(lbl+(sc?' \u2014 '+sc.toFixed(1)+' pts':' \u2014 incomplete'),M+4,y+6.5);
     y+=13;
