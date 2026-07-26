@@ -170,6 +170,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
 .saved-item-actions{display:flex;gap:.5rem}
 .savebtn{border:none;border-radius:7px;padding:.45rem .9rem;font-size:.75rem;font-weight:700;
   cursor:pointer;font-family:'Inter',sans-serif}
+.savebtn-view{background:#f1f5f9;color:var(--ink);border:1.5px solid var(--border)}
 .savebtn-load{background:#2563eb;color:#fff}
 .savebtn-delete{background:#dc2626;color:#fff}
 .saved-empty{font-size:.82rem;color:var(--muted);text-align:center;padding:2.5rem 0}
@@ -353,6 +354,32 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
     <div class="modal-actions">
       <button class="dlbtn dlbtn-outline" onclick="closeSaveModal()">Cancel</button>
       <button class="dlbtn dlbtn-solid" onclick="confirmSaveCalculation()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="view-modal-overlay" style="display:none">
+  <div class="modal-box" style="max-width:640px">
+    <h3 id="view-modal-title">Calculation</h3>
+    <p id="view-modal-date" style="text-align:center;margin-top:-.4rem"></p>
+    <div class="res-d-row" style="margin:1rem 0">
+      <div class="res-d-item">
+        <svg id="view-seg-svg" width="200" height="200" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="res-d-label" style="color:var(--muted)">Segment Profile</div>
+      </div>
+      <div class="res-d-item">
+        <svg id="view-score-svg" width="200" height="200" viewBox="-16 -16 252 252" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="res-d-label" style="color:var(--muted)">Scores</div>
+      </div>
+    </div>
+    <div class="rgrid">
+      <div class="rcard"><h4>Innovation</h4><div class="rbig" id="view-rs-I">&#8211;</div></div>
+      <div class="rcard"><h4>Greenness</h4><div class="rbig" id="view-rs-G">&#8211;</div></div>
+      <div class="rcard"><h4>Analytical Performance</h4><div class="rbig" id="view-rs-P">&#8211;</div></div>
+      <div class="rcard"><h4>Practicality</h4><div class="rbig" id="view-rs-A">&#8211;</div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="dlbtn dlbtn-solid" onclick="closeViewModal()">Close</button>
     </div>
   </div>
 </div>
@@ -596,8 +623,8 @@ function sectionMaxPts(k){
     return sum+Math.max(...q.opts.map(o=>o.pts));
   },0);
 }
-function calcScore(k){
-  const a=ANS[k];
+function calcScore(k,ansAll){
+  const a=(ansAll||ANS)[k];
   if(Object.keys(a).length===0)return null;
   const raw=Object.values(a).reduce((s,v)=>s+v.pts,0);
   return raw/sectionMaxPts(k)*100;
@@ -637,9 +664,10 @@ const SUB_LABEL_POS={
 /* Data keys A/P are legacy (A=Practicality, P=Analytical Performance), but the letter
    shown on the diamond should match the current names' initials (Analytical->A, Practicality->P) */
 const DISPLAY_LETTER={I:'I',G:'G',P:'A',A:'P'};
-function drawSegDiamond(svgId,scale,showLabels){
+function drawSegDiamond(svgId,scale,showLabels,ansAll){
   const svg=document.getElementById(svgId);if(!svg)return;
   const s=scale||1;
+  const A=ansAll||ANS;
   let h='';
   // white background sub-diamonds
   Object.entries(SUBS).forEach(([k,sub])=>{
@@ -650,7 +678,7 @@ function drawSegDiamond(svgId,scale,showLabels){
   Object.entries(SUBS).forEach(([k,sub])=>{
     const cx=sub.cx*s,cy=sub.cy*s,hs=H*s;
     segPaths(cx,cy,hs).forEach((seg,i)=>{
-      const ans=ANS[k][i];
+      const ans=A[k][i];
       h+=`<path d="${seg.d}" fill="${ans?SFILL[ans.c]:SFILL.e}" stroke="white" stroke-width="${1.2*s}" stroke-linejoin="round"/>`;
       h+=`<text x="${seg.lx}" y="${seg.ly+3*s}" text-anchor="middle" font-size="${9*s}" font-weight="700" fill="${ans?textOnFill(ans.c):'#9ca3af'}" font-family="Inter,sans-serif">${i+1}</text>`;
     });
@@ -671,11 +699,11 @@ function drawSegDiamond(svgId,scale,showLabels){
    section, each showing its own score, arranged I=top, G=right, A=bottom, P=left —
    reusing the exact same positions/size (SUBS, H) as the segment-profile diamond so both
    stay identical in size), with a white circle in the center showing the overall total */
-function drawScoreDiamond(svgId,scale,showLabels,lockTotal){
+function drawScoreDiamond(svgId,scale,showLabels,lockTotal,ansAll){
   const svg=document.getElementById(svgId);if(!svg)return;
   const s=scale||1;
   const scores={};
-  ['I','G','A','P'].forEach(k=>scores[k]=calcScore(k));
+  ['I','G','A','P'].forEach(k=>scores[k]=calcScore(k,ansAll));
   let h='';
   Object.entries(SUBS).forEach(([k,sub])=>{
     const cx=sub.cx*s,cy=sub.cy*s,hs=H*s;
@@ -741,19 +769,9 @@ function updateResults(){
 }
 
 /* ═══════════════════════════════ NAVIGATION (one section at a time) ═══
-   Sections must be completed in order — can't advance to the next section,
-   or to Results, until every question in the section(s) before it is answered */
-const SEC_ORDER=['I','G','P','A'];
-function sectionComplete(k){return Object.keys(ANS[k]).length===QS[k].length;}
+   Results (including Saved Calculations) can always be opened — the results
+   view itself already shows a warning banner when questions are unanswered */
 function goTab(t){
-  if(t==='R'){
-    const blocker=SEC_ORDER.find(k=>!sectionComplete(k));
-    if(blocker){
-      const names={I:'Innovation',G:'Greenness',P:'Analytical Performance',A:'Practicality'};
-      alert('Please answer all questions in the "'+names[blocker]+'" section before viewing results.');
-      return;
-    }
-  }
   document.querySelectorAll('.step').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelector('[data-t="'+t+'"]').classList.add('active');
@@ -835,6 +853,7 @@ function renderSavedList(){
       </div>
       <span class="saved-item-score">IGAP: ${scoreTxt}</span>
       <div class="saved-item-actions">
+        <button class="savebtn savebtn-view" onclick="viewSavedCalculation(${item.id})">&#128065; View</button>
         <button class="savebtn savebtn-load" onclick="loadSavedCalculation(${item.id})">&#8681; Load</button>
         <button class="savebtn savebtn-delete" onclick="deleteSavedCalculation(${item.id})">&#128465; Delete</button>
       </div>
@@ -874,6 +893,25 @@ function loadSavedCalculation(id){
   drawAllDiamonds();
   updateResults();
   showResultsSubtab('results');
+}
+
+/* Read-only peek at a saved calculation — draws from the saved snapshot only,
+   never touches the live ANS, so the user's current in-progress answers are safe */
+function viewSavedCalculation(id){
+  const item=getSavedCalcs().find(c=>c.id===id);
+  if(!item)return;
+  document.getElementById('view-modal-title').textContent=item.name;
+  document.getElementById('view-modal-date').textContent=new Date(item.savedAt).toLocaleString();
+  drawSegDiamond('view-seg-svg',1,true,item.ans);
+  drawScoreDiamond('view-score-svg',1,true,false,item.ans);
+  ['I','G','P','A'].forEach(k=>{
+    const sc=calcScore(k,item.ans);
+    document.getElementById('view-rs-'+k).textContent=sc!==null?sc.toFixed(1)+'%':'–';
+  });
+  document.getElementById('view-modal-overlay').style.display='flex';
+}
+function closeViewModal(){
+  document.getElementById('view-modal-overlay').style.display='none';
 }
 
 function deleteSavedCalculation(id){
