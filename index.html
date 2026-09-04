@@ -255,7 +255,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);min-he
     <div id="results-view">
     <div class="rintro">
       <h3>Scoring Guide</h3>
-      <p>Each of the 32 questions scores one segment. Total IGAP = average of all four diamonds.</p>
+      <p>Each of the 32 questions scores one segment. Total IGAP is weighted: Innovation 10% &middot; Greenness 30% &middot; Analytical Performance 30% &middot; Practicality 30%.</p>
       <div class="spills">
         <span class="spill"><span class="sd" style="background:#16a34a"></span>High (Green) = 3 pts</span>
         <span class="spill"><span class="sd" style="background:#ffd304"></span>Acceptable (Yellow) = 2 pts</span>
@@ -630,6 +630,16 @@ function calcScore(k,ansAll){
   return raw/sectionMaxPts(k)*100;
 }
 
+/* Weighted overall IGAP score:
+   Innovation 10% | Greenness 30% | Analytical Performance 30% | Practicality 30% */
+const IGAP_W={I:0.10,G:0.30,P:0.30,A:0.30};
+function overallScore(ansAll){
+  const ks=['I','G','P','A'];
+  const sc=ks.map(k=>calcScore(k,ansAll));
+  if(sc.every(v=>v===null))return null;
+  return ks.reduce((t,k,i)=>t+(sc[i]||0)*IGAP_W[k],0);
+}
+
 /* ═══════════════════════════════ DIAMOND GEOMETRY ════════════════════
    The IGAP diamond = 4 sub-diamonds arranged: I=top, G=right, A=bottom, P=left
    Each sub-diamond has 8 triangular segments from center.
@@ -718,9 +728,7 @@ function drawScoreDiamond(svgId,scale,showLabels,lockTotal,ansAll){
       h+=`<text x="${lx}" y="${ly}" text-anchor="${lp.anchor}" font-size="${13*s}" font-weight="800" fill="#334155" font-family="Inter,sans-serif">${DISPLAY_LETTER[k]}</text>`;
     }
   });
-  const scoresArr=['I','G','A','P'].map(k=>scores[k]);
-  const valid=scoresArr.filter(v=>v!==null);
-  const avg=(!lockTotal&&valid.length>0)?scoresArr.reduce((s,v)=>s+(v||0),0)/4:null;
+  const avg=lockTotal?null:overallScore(ansAll);
   h+=`<circle cx="${110*s}" cy="${110*s}" r="${22*s}" fill="white" stroke="#1e293b" stroke-width="${2*s}"/>`;
   h+=`<text x="${110*s}" y="${110*s+5*s}" text-anchor="middle" font-size="${15*s}" font-weight="800" fill="#0f172a" font-family="Inter,sans-serif">${avg!==null?avg.toFixed(1):'–'}</text>`;
   svg.innerHTML=h;
@@ -749,12 +757,10 @@ function updateResults(){
     for(let i=0;i<8;i++){const a=ANS[k][i];s+=`<div class="seg" style="background:${a?SFILL[a.c]:'var(--border)'}"></div>`}
     document.getElementById('seg-'+k).innerHTML=s;
   });
-  const scores=['I','G','A','P'].map(k=>calcScore(k));
-  const valid=scores.filter(s=>s!==null);
-  if(valid.length){
-    const avg=scores.reduce((s,v)=>s+(v||0),0)/4;
+  const avg=overallScore();
+  if(avg!==null){
     document.getElementById('tot').textContent=avg.toFixed(1)+'%';
-    document.getElementById('tsub').textContent='Average of all four diamonds (\u00f74)';
+    document.getElementById('tsub').textContent='Weighted: innovation 10% \u00b7 greenness 30% \u00b7 analytical performance 30% \u00b7 practicality 30%';
     const ck=compKey(avg),cc=COMP[ck];
     document.getElementById('tcomp').textContent=cc.lbl;
   }
@@ -812,7 +818,7 @@ function confirmSaveCalculation(){
   const name=nameInput.value.trim()||('Calculation '+new Date().toLocaleString());
   const scores={I:calcScore('I'),G:calcScore('G'),P:calcScore('P'),A:calcScore('A')};
   const valid=Object.values(scores).filter(s=>s!==null);
-  const overall=valid.length>0?Object.values(scores).reduce((s,v)=>s+(v||0),0)/4:null;
+  const overall=overallScore();
   const list=getSavedCalcs();
   list.unshift({
     id:Date.now(),
@@ -1005,8 +1011,7 @@ function downloadPDF(){
 
   // Scores summary box
   const scores={I:calcScore('I'),G:calcScore('G'),A:calcScore('A'),P:calcScore('P')};
-  const avg=Object.values(scores).filter(s=>s!==null).length>0?
-    Object.values(scores).reduce((s,v)=>s+(v||0),0)/4:null;
+  const avg=overallScore();
   const whiteScoresArr=[scores.G,scores.P,scores.A];
   const whiteAvg=whiteScoresArr.filter(s=>s!==null).length>0?
     whiteScoresArr.reduce((s,v)=>s+(v||0),0)/3:null;
